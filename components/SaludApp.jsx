@@ -189,6 +189,42 @@ export default function SaludApp() {
     if (!injSite) setInjSite(summary.nextSiteSuggestion?.id || "muslo_der");
   }, [state, summary.nextSiteSuggestion, injDose, injSite]);
 
+  const filteredFoods = useMemo(() => {
+    return FOOD_GUIDE.filter((f) => {
+      if (foodFilter !== "all" && f.category !== foodFilter) return false;
+      if (!foodQuery.trim()) return true;
+      const q = foodQuery.toLowerCase();
+      return (
+        f.name.toLowerCase().includes(q) ||
+        f.group.toLowerCase().includes(q) ||
+        f.reason.toLowerCase().includes(q)
+      );
+    });
+  }, [foodFilter, foodQuery]);
+
+  const filteredExercises = useMemo(() => {
+    return EXERCISES.filter((ex) => {
+      if (
+        selectedMuscles.length > 0 &&
+        !selectedMuscles.includes(ex.primary) &&
+        !ex.secondary?.some((s) => selectedMuscles.includes(s))
+      ) {
+        return false;
+      }
+      if (equipmentFilter !== "ALL" && ex.equipment !== equipmentFilter) {
+        return false;
+      }
+      if (exerciseSearch.trim()) {
+        const q = exerciseSearch.toLowerCase();
+        return (
+          ex.name.toLowerCase().includes(q) ||
+          ex.nameEn.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [selectedMuscles, equipmentFilter, exerciseSearch]);
+
   if (!state) {
     return (
       <main className="loading-screen">
@@ -506,42 +542,6 @@ export default function SaludApp() {
         : [...prev, muscleId],
     );
   };
-
-  const filteredFoods = useMemo(() => {
-    return FOOD_GUIDE.filter((f) => {
-      if (foodFilter !== "all" && f.category !== foodFilter) return false;
-      if (!foodQuery.trim()) return true;
-      const q = foodQuery.toLowerCase();
-      return (
-        f.name.toLowerCase().includes(q) ||
-        f.group.toLowerCase().includes(q) ||
-        f.reason.toLowerCase().includes(q)
-      );
-    });
-  }, [foodFilter, foodQuery]);
-
-  const filteredExercises = useMemo(() => {
-    return EXERCISES.filter((ex) => {
-      if (
-        selectedMuscles.length > 0 &&
-        !selectedMuscles.includes(ex.primary) &&
-        !ex.secondary?.some((s) => selectedMuscles.includes(s))
-      ) {
-        return false;
-      }
-      if (equipmentFilter !== "ALL" && ex.equipment !== equipmentFilter) {
-        return false;
-      }
-      if (exerciseSearch.trim()) {
-        const q = exerciseSearch.toLowerCase();
-        return (
-          ex.name.toLowerCase().includes(q) ||
-          ex.nameEn.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [selectedMuscles, equipmentFilter, exerciseSearch]);
 
   const activeSymptomGuide =
     SYMPTOM_CATALOG.find((s) => s.id === selectedSymptomId) ||

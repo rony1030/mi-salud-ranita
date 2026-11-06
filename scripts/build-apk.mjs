@@ -19,19 +19,21 @@ async function main() {
   fs.mkdirSync(path.join(WORK_DIR, "assets"), { recursive: true });
   fs.mkdirSync(path.join(WORK_DIR, "compiled"), { recursive: true });
 
-  // 1. Copy standalone index.html into assets/index.html
+  // 1. Copy standalone index.html and art-bundle.js into assets/
   const standaloneHtml = path.join(rootDir, "dist-apk", "index.html");
-  if (!fs.existsSync(standaloneHtml)) {
-    throw new Error("dist-apk/index.html not found. Run build-standalone.mjs first.");
+  const artBundleJs = path.join(rootDir, "dist-apk", "art-bundle.js");
+  if (!fs.existsSync(standaloneHtml) || !fs.existsSync(artBundleJs)) {
+    throw new Error("dist-apk files not found. Run build-standalone.mjs first.");
   }
   fs.copyFileSync(standaloneHtml, path.join(WORK_DIR, "assets", "index.html"));
+  fs.copyFileSync(artBundleJs, path.join(WORK_DIR, "assets", "art-bundle.js"));
 
-  // 2. Write AndroidManifest.xml (targetSdkVersion 29 avoids Android 11+ resources.arsc alignment rejection)
+  // 2. Write AndroidManifest.xml (versionCode 2 / 1.1.0)
   const manifestXml = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.misalud.ranitaglp1"
-    android:versionCode="1"
-    android:versionName="1.0.0">
+    android:versionCode="2"
+    android:versionName="1.1.0">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="29" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -45,11 +47,12 @@ async function main() {
 
         <activity
             android:name="com.misalud.ranitaglp1.MainActivity"
+            android:label="@string/app_name"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.action.LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
@@ -194,7 +197,7 @@ async function main() {
     { stdio: "inherit" }
   );
 
-  // 7. Link APK with aapt2 (including assets/index.html and keeping arsc uncompressed)
+  // 7. Link APK with aapt2 (including assets/index.html and assets/art-bundle.js)
   const unsignedApk = path.join(WORK_DIR, "unsigned.apk");
   execFileSync(
     AAPT2,
@@ -263,7 +266,7 @@ async function main() {
   const finalApkPath = path.join(rootDir, "Mi-Salud-Ranita-GLP1.apk");
   fs.writeFileSync(finalApkPath, Buffer.from(signedApk));
   console.log(
-    `✅ APK compilado y firmado (v1+v2+v3): ${finalApkPath} (${(signedApk.byteLength / (1024 * 1024)).toFixed(2)} MB)`
+    `✅ APK v1.1.0 compilado y firmado (v1+v2+v3): ${finalApkPath} (${(signedApk.byteLength / (1024 * 1024)).toFixed(2)} MB)`
   );
 }
 
