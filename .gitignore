@@ -1,6 +1,7 @@
 node_modules/
 .next/
 out/
+dist-apk/
 .local/
 .env*.local
 .DS_Store

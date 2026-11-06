@@ -1,6 +1,12 @@
 # 🐸 Mi Salud Ranita GLP-1 — Guía de Dieta, Seguimiento Semanal, Síntomas y Gym
 
-Aplicación web / PWA inspirada en la experiencia visual y mascota interactiva de **Mi Finanza** y recreando el sistema de entrenamiento anatómico de **[GymMane by InlitX](https://github.com/InlitX/GymMane)**, adaptada especialmente para personas que utilizan **Mounjaro (Tirzepatida)** u **Ozempic (Semaglutida)** — diseñada con cariño para **Massiel**.
+### 📲 [Descargar APK para Android (`Mi-Salud-Ranita-GLP1.apk` · 1.82 MB)](https://github.com/rony1030/mi-salud-ranita/raw/main/Mi-Salud-Ranita-GLP1.apk)
+
+> **Instalación directa en Android:** Toca el enlace de arriba desde el celular para descargar **`Mi-Salud-Ranita-GLP1.apk`** e instálalo directamente. Funciona **100 % offline** (sin servidor y sin necesidad de internet), guardando todos los datos en el teléfono.
+
+---
+
+Aplicación web / PWA y APK de Android inspirada en la experiencia visual y mascota interactiva de **Mi Finanza** y recreando el sistema de entrenamiento anatómico de **[GymMane by InlitX](https://github.com/InlitX/GymMane)**, adaptada especialmente para personas que utilizan **Mounjaro (Tirzepatida)** u **Ozempic (Semaglutida)** — diseñada con cariño para **Massiel**.
 
 > **Aviso importante:** Esta aplicación es una herramienta **100 % gratuita, informativa y de registro personal**. No prescribe medicamentos ni sustituye la consulta con un médico o nutricionista. Reúne en un solo lugar la información educativa de alimentación, hidratación, alivio de síntomas y preservación muscular que otras aplicaciones de GLP-1 suelen cobrar por suscripción.
 
@@ -13,7 +19,7 @@ Aplicación web / PWA inspirada en la experiencia visual y mascota interactiva d
    - Incluye frases motivadoras y cálidas con toque dominicano y consejos prácticos al instante.
 
 2. **💉 Seguimiento Semanal de Inyección GLP-1 (Mounjaro / Ozempic)**
-   - Registro de dosis (`2.5 mg` a `15 mg` para Mounjaro; `0.25 mg` a `2.0 mg` para Ozempic).
+   - Registro de dosis (`2.5 mg` a `15 mg` para Mounjaro; `0.25 mg` a `2.4 mg` para Ozempic).
    - **Mapa de rotación de 6 zonas** (abdomen izquierdo/derecho, muslo izquierdo/derecho, brazo izquierdo/derecho) que sugiere automáticamente dónde toca inyectarse esta semana para cuidar la piel.
    - **Línea de tiempo del ciclo de 7 días** (Día 1-2 Pico de efecto, Día 3-5 Quema activa y fuerza, Día 6-7 Cierre de ciclo, o recordatorio si pasaron más de 7 días).
    - **Registro semanal de peso y medidas** (`lb` / `kg`, cintura y cadera) con gráfica de evolución.
@@ -37,12 +43,19 @@ Aplicación web / PWA inspirada en la experiencia visual y mascota interactiva d
 
 ---
 
-## 🚀 Desarrollo local
+## 🚀 Desarrollo local y compilación del APK
 
 ```bash
 npm install
 npm test
 npm run dev
+```
+
+Para regenerar el paquete autónomo y el archivo `Mi-Salud-Ranita-GLP1.apk`:
+
+```bash
+node scripts/build-standalone.mjs
+node scripts/build-apk.mjs
 ```
 
 ---

@@ -11,7 +11,6 @@ function computeViewBox(frames) {
   let maxX = -Infinity;
   let maxY = -Infinity;
 
-  // Extract coordinate pairs from M Commands and absolute coordinates to get a reliable bounding box
   const firstFrame = frames[0] || "";
   const tokenRegex = /([MLC])\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/g;
   let match;
@@ -50,8 +49,16 @@ export default function ExerciseArt({
       setFailed(false);
       return;
     }
+    if (typeof window !== "undefined" && window.__EXERCISE_ART__?.[slug]) {
+      const frames = window.__EXERCISE_ART__[slug];
+      const parsed = { frames, viewBox: computeViewBox(frames) };
+      artCache.set(slug, parsed);
+      setData(parsed);
+      setFailed(false);
+      return;
+    }
     let cancelled = false;
-    fetch(`/art/${slug}.txt`)
+    fetch(`./art/${slug}.txt`)
       .then((r) => {
         if (!r.ok) throw new Error("No art");
         return r.text();
