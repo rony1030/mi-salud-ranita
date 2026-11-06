@@ -2,14 +2,14 @@ export const dynamic = "force-static";
 
 export default function manifest() {
   return {
-    name: "GymMane GLP-1 · Fuerza & Salud Metabólica",
-    short_name: "GymMane GLP-1",
+    name: "GymMane · Fuerza a tu ritmo",
+    short_name: "GymMane",
     description:
-      "Entrenamiento de fuerza y seguimiento clínico para Mounjaro / Ozempic con nutrición, control de síntomas y series en vivo.",
+      "Entrenamiento de fuerza, nutrición y seguimiento personal en un solo lugar.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0D0D0F",
-    theme_color: "#0D0D0F",
+    background_color: "#0c1021",
+    theme_color: "#0c1021",
     icons: [
       {
         src: "/icon.svg",

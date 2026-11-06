@@ -1,129 +1,87 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dumbbell } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 
 const artCache = new Map();
+const POSE_MS = 650;
 
-function computeViewBox(frames) {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  const firstFrame = frames[0] || "";
-  const tokenRegex = /([MLC])\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/g;
-  let match;
-  while ((match = tokenRegex.exec(firstFrame)) !== null) {
-    const x = parseFloat(match[2]);
-    const y = parseFloat(match[3]);
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    }
+function loadFrames(slug) {
+  if (!artCache.has(slug)) {
+    const bundled = window.__EXERCISE_ART__?.[slug];
+    const request = bundled
+      ? Promise.resolve(bundled)
+      : fetch(`./art/${slug}.txt`).then(async (response) => {
+          if (!response.ok) throw new Error("No se encontró la ilustración");
+          return (await response.text()).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        });
+    artCache.set(slug, request.catch((error) => {
+      artCache.delete(slug);
+      throw error;
+    }));
   }
-
-  if (!Number.isFinite(minX) || maxX <= minX) {
-    return "0 0 500 500";
-  }
-  const pad = 35;
-  return `0 0 ${Math.max(460, Math.ceil(maxX + pad))} ${Math.max(460, Math.ceil(maxY + pad))}`;
+  return artCache.get(slug);
 }
 
-export default function ExerciseArt({
-  slug,
-  height = 180,
-  live = true,
-  className = "",
-}) {
-  const [data, setData] = useState(() => (slug ? artCache.get(slug) || null : null));
-  const [frameIdx, setFrameIdx] = useState(0);
-  const [failed, setFailed] = useState(false);
+export default function ExerciseArt({ slug }) {
+  const [art, setArt] = useState(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPlaying(!preference.matches);
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
-    if (artCache.has(slug)) {
-      setData(artCache.get(slug));
-      setFailed(false);
-      return;
-    }
-    if (typeof window !== "undefined" && window.__EXERCISE_ART__?.[slug]) {
-      const frames = window.__EXERCISE_ART__[slug];
-      const parsed = { frames, viewBox: computeViewBox(frames) };
-      artCache.set(slug, parsed);
-      setData(parsed);
-      setFailed(false);
-      return;
-    }
     let cancelled = false;
-    fetch(`./art/${slug}.txt`)
-      .then((r) => {
-        if (!r.ok) throw new Error("No art");
-        return r.text();
-      })
-      .then((txt) => {
-        if (cancelled) return;
-        const frames = txt
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        if (!frames.length) throw new Error("Empty art");
-        const parsed = { frames, viewBox: computeViewBox(frames) };
-        artCache.set(slug, parsed);
-        setData(parsed);
-        setFailed(false);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    loadFrames(slug).then(
+      (frames) => { if (!cancelled) setArt({ slug, frames }); },
+      () => { if (!cancelled) setArt({ slug, frames: [] }); },
+    );
+    return () => { cancelled = true; };
   }, [slug]);
 
-  useEffect(() => {
-    if (!live || !data || data.frames.length < 2) return;
-    const total = data.frames.length;
-    const sequence = [];
-    for (let i = 0; i < total; i++) sequence.push(i);
-    for (let i = total - 2; i > 0; i--) sequence.push(i);
-    let step = 0;
-    const timer = setInterval(() => {
-      step = (step + 1) % sequence.length;
-      setFrameIdx(sequence[step]);
-    }, 620);
-    return () => clearInterval(timer);
-  }, [live, data]);
-
-  if (!slug || failed || !data) {
+  const frames = art?.slug === slug ? art.frames : null;
+  if (!frames?.length) {
     return (
-      <div
-        className={`exercise-art-box fallback ${className}`}
-        style={{ height }}
-      >
-        <Dumbbell size={36} color="#FF6B35" />
-      </div>
+      <p className="exercise-art-message" role="status">
+        {slug && !frames ? "Cargando demostración…" : "Ilustración no disponible. Consulta los pasos del ejercicio."}
+      </p>
     );
   }
 
-  const currentPath = data.frames[frameIdx % data.frames.length] || data.frames[0];
+  // Preserve the source poses. Contours differ across drawings, so morphing their
+  // points could distort the posture. Replay them in both directions with a dissolve.
+  const sequence = [...frames, ...frames.slice(1, -1).reverse()];
+  const animated = sequence.length === 2 || sequence.length === 4;
 
   return (
-    <div className={`exercise-art-box ${className}`} style={{ height }}>
-      <svg
-        viewBox="0 0 500 500"
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <path d={currentPath} fill="#0F172A" fillRule="evenodd" />
+    <div className="exercise-art">
+      <svg viewBox="0 0 500 500" role="img" aria-label="Demostración de la técnica del ejercicio">
+        {(animated ? sequence : frames.slice(0, 1)).map((pose, index) => (
+          <path
+            key={index}
+            d={pose}
+            fill="currentColor"
+            fillRule="evenodd"
+            className={animated ? `exercise-pose exercise-pose-${sequence.length}` : undefined}
+            style={animated ? {
+              animationDuration: `${sequence.length * POSE_MS}ms`,
+              animationDelay: `${(index - sequence.length) * POSE_MS}ms`,
+              animationPlayState: playing ? "running" : "paused",
+            } : undefined}
+          />
+        ))}
       </svg>
-      {data.frames.length > 1 && (
-        <span className="exercise-art-badge">
-          {live ? `Animación ${frameIdx + 1}/${data.frames.length}` : "Técnica"}
-        </span>
+      {animated && (
+        <button type="button" className="gm-pill-btn" onClick={() => setPlaying(!playing)}>
+          {playing ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
+          {playing ? "Pausar demostración" : "Reproducir demostración"}
+        </button>
       )}
     </div>
   );

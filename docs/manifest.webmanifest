@@ -1,0 +1,16 @@
+{
+  "name": "GymMane · Fuerza a tu ritmo",
+  "short_name": "GymMane",
+  "description": "Entrenamiento de fuerza, nutrición y seguimiento personal en un solo lugar.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0c1021",
+  "theme_color": "#0c1021",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

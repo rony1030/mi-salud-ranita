@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -17,13 +17,15 @@ import {
   Info,
   Layers,
   LayoutDashboard,
-  MoreHorizontal,
   Play,
   Plus,
   RotateCcw,
   Scale,
   Search,
   Settings as SettingsIcon,
+  Sun,
+  Moon,
+  Monitor,
   ShieldCheck,
   Sparkles,
   Syringe,
@@ -67,6 +69,25 @@ const NAV_DESTINATIONS = [
   { id: "seguimiento", label: "Progreso", icon: TrendingUp },
 ];
 
+const APPEARANCE_OPTIONS = [
+  { id: "system", label: "Sistema", icon: Monitor },
+  { id: "light", label: "Claro", icon: Sun },
+  { id: "dark", label: "Oscuro", icon: Moon },
+];
+
+const APPEARANCE_KEY = "gymmane-appearance";
+
+function BrandIntro({ ready = false }) {
+  return (
+    <div className={`brand-intro${ready ? " brand-intro-ready" : ""}`} aria-hidden={ready || undefined}>
+      <div className="brand-intro-signature">
+        <img src="./logo.svg" width="308" height="92" alt="GymMane" />
+        <p>Fuerza a tu ritmo</p>
+      </div>
+    </div>
+  );
+}
+
 function playBeepSound() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -90,6 +111,7 @@ export default function GymManeApp() {
   const [activeTab, setActiveTab] = useState("hoy");
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appearance, setAppearance] = useState(null);
   const [routineModal, setRoutineModal] = useState(null);
 
   // Train Tab State
@@ -113,19 +135,58 @@ export default function GymManeApp() {
   const [selectedMealType, setSelectedMealType] = useState("desayuno");
 
   // Tracking Sub-views
-  const [trackingSubView, setTrackingSubView] = useState("injection"); // injection | symptoms | metrics
+  const trackingTarget = useRef(null);
+
+  useEffect(() => {
+    const target = trackingTarget.current;
+    trackingTarget.current = null;
+    if (target) {
+      const panel = document.getElementById(target);
+      panel?.scrollIntoView({ block: "start" });
+      panel?.focus({ preventScroll: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [activeTab]);
 
   // Injection Dialog Form
   const [doseAmount, setDoseAmount] = useState("");
   const [doseSite, setDoseSite] = useState("");
 
   // Symptom Form
-  const [selectedSymptomId, setSelectedSymptomId] = useState("nausea");
+  const [selectedSymptomId, setSelectedSymptomId] = useState(SYMPTOM_CATALOG[0].id);
   const [symptomSeverity, setSymptomSeverity] = useState(2);
   const [symptomNotes, setSymptomNotes] = useState("");
 
   // Weight Form
   const [newWeight, setNewWeight] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(APPEARANCE_KEY);
+      setAppearance(APPEARANCE_OPTIONS.some((option) => option.id === saved) ? saved : "system");
+    } catch {
+      setAppearance("system");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!appearance) return;
+    const preference = window.matchMedia("(prefers-color-scheme: light)");
+    const update = () => {
+      const theme = appearance === "system" ? (preference.matches ? "light" : "dark") : appearance;
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#edf2ff" : "#0c1021");
+    };
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, [appearance]);
+
+  const selectAppearance = (option) => {
+    setAppearance(option);
+    try { localStorage.setItem(APPEARANCE_KEY, option); } catch {}
+  };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -488,12 +549,7 @@ export default function GymManeApp() {
   };
 
   if (!state || !overview) {
-    return (
-      <main className="adaptive-main-area" style={{ justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-        <Dumbbell size={36} color="#FF6B35" />
-        <p style={{ marginTop: 12, fontWeight: 700, color: "#8E8E93" }}>Cargando GymMane GLP-1…</p>
-      </main>
-    );
+    return <div className="adaptive-app-shell"><BrandIntro /></div>;
   }
 
   const { profile } = state;
@@ -507,15 +563,16 @@ export default function GymManeApp() {
 
   return (
     <div className="adaptive-app-shell">
+      <BrandIntro ready />
       {/* Toast Notification */}
-      {toast && <div className="gm-toast-pill">{toast}</div>}
+      <div role="status">{toast && <div className="gm-toast-pill">{toast}</div>}</div>
 
       {/* 1. Side Navigation Rail (Desktop / Tablet >= 768px) */}
-      <aside className="m3-navigation-rail" aria-label="Navegación lateral adaptativa">
+      <nav className="m3-navigation-rail" aria-label="Navegación principal">
         <div className="rail-top-group">
-          <div className="rail-brand-logo" onClick={() => setActiveTab("hoy")} title="GymMane GLP-1" style={{ cursor: "pointer" }}>
-            <Dumbbell size={22} />
-          </div>
+          <button className="rail-brand-logo" onClick={() => setActiveTab("hoy")} aria-label="GymMane, inicio">
+            <img src="./icon.svg" width="44" height="44" alt="" />
+          </button>
 
           <div className="rail-nav-items">
             {NAV_DESTINATIONS.map((dest) => {
@@ -525,6 +582,7 @@ export default function GymManeApp() {
                 <button
                   key={dest.id}
                   className={`rail-item-btn ${isActive ? "active" : ""}`}
+                  aria-current={isActive ? "page" : undefined}
                   onClick={() => setActiveTab(dest.id)}
                   title={dest.label}
                 >
@@ -543,42 +601,18 @@ export default function GymManeApp() {
             <SettingsIcon size={18} />
           </button>
         </div>
-      </aside>
+      </nav>
 
       {/* 2. Main Content View */}
-      <div className="adaptive-main-area">
+      <div className={`adaptive-main-area${restActive ? " has-rest-timer" : ""}`}>
         {/* Top App Bar */}
         <header className="m3-top-app-bar">
-          <div className="top-bar-headline-group" onClick={() => setActiveTab("hoy")} style={{ cursor: "pointer" }}>
-            <span className="top-bar-subtitle">GYMMANE · GLP-1</span>
-            <h1 className="top-bar-title">
-              {activeTab === "hoy"
-                ? "Viernes, 6 Nov"
-                : activeTab === "entrenar"
-                ? "Entrenar"
-                : activeTab === "programas"
-                ? "Programas"
-                : activeTab === "nutricion"
-                ? "Nutrición"
-                : "Progreso"}
-            </h1>
+          <div className="top-bar-headline-group">
+            <img className="top-bar-brand" src="./logo.svg" width="112" height="33" alt="GymMane" />
+            <h1 className="top-bar-title">{NAV_DESTINATIONS.find((dest) => dest.id === activeTab).label}</h1>
           </div>
 
           <div className="top-bar-trailing-group">
-            {/* Streak Flame Pill */}
-            <div className="top-bar-streak-pill" title="Racha activa">
-              <Flame size={15} fill="currentColor" />
-              <span>12</span>
-            </div>
-
-            {/* Profile Capsule */}
-            <div className="m3-profile-capsule" onClick={() => setSettingsOpen(true)} style={{ cursor: "pointer" }}>
-              <span className="capsule-badge-dot"></span>
-              <span>{profile.name}</span>
-              <span style={{ color: "var(--text-dim)" }}>·</span>
-              <span className="num-tabular">{overview.latestWeight} {unitLabel}</span>
-            </div>
-
             <button className="m3-icon-button" onClick={() => setSettingsOpen(true)} aria-label="Ajustes">
               <SettingsIcon size={18} />
             </button>
@@ -588,7 +622,7 @@ export default function GymManeApp() {
         {/* Floating Rest Timer Sheet */}
         {restActive && (
           <aside className="gm-rest-sheet">
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="gm-rest-info">
               <Timer size={22} color="var(--accent-orange)" />
               <div>
                 <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
@@ -599,7 +633,7 @@ export default function GymManeApp() {
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="gm-rest-actions">
               <button
                 className="gm-pill-btn"
                 onClick={() => setRestSeconds((s) => s + 15)}
@@ -608,7 +642,7 @@ export default function GymManeApp() {
               </button>
               <button
                 className="gm-pill-btn"
-                style={{ background: "#FFFFFF", color: "#000000", fontWeight: 800 }}
+                style={{ background: "var(--text-primary)", color: "var(--bg-base)", fontWeight: 800 }}
                 onClick={() => {
                   setRestActive(false);
                   setRestSeconds(0);
@@ -626,7 +660,12 @@ export default function GymManeApp() {
           {/* TAB 1: HOY (DASHBOARD — EXACTLY LIKE SCREENSHOT 1 & 4) */}
           {/* ========================================================================= */}
           {activeTab === "hoy" && (
-            <div className="tab-pane-view">
+            <div className="tab-pane-view gm-dashboard">
+              <div className="gm-dashboard-heading">
+                <p><Calendar size={15} aria-hidden="true" /> {new Intl.DateTimeFormat("es", { dateStyle: "full", timeZone: "UTC" }).format(new Date(currentDate))}</p>
+                <h2>Tu panel de bienestar</h2>
+                <span>Entrenamiento, nutrición y seguimiento personal.</span>
+              </div>
               {/* 1. Hero Card: TODAY'S ROUTINE */}
               {(() => {
                 const activeProg =
@@ -634,19 +673,22 @@ export default function GymManeApp() {
                 const dayOne = activeProg.days[0];
                 return (
                   <section className="gm-card gm-card-hero">
+                    <div className="gm-hero-art" aria-hidden="true">
+                      <div className="gm-glass-orb"><Dumbbell strokeWidth={1.1} /></div>
+                    </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <span className="card-eyebrow">RUTINA DE HOY</span>
                         <h2 className="card-title-lg" style={{ marginTop: 4 }}>
-                          {activeProg.name.replace(/GLP-1\s*/i, "")}
+                          {activeProg.name}
                         </h2>
                         <div className="card-meta-text" style={{ marginTop: 4 }}>
-                          🏃‍♂️ {dayOne.exercises.length} ejercicios · {activeProg.durationMin} min · {dayOne.dayName}
+                          {dayOne.exercises.length} ejercicios · {activeProg.durationMin} min · {dayOne.dayName}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                    <div className="gm-hero-actions">
                       <button
                         className="gm-btn-white"
                         onClick={() => startWorkoutFromRoutine(activeProg, 0)}
@@ -656,9 +698,9 @@ export default function GymManeApp() {
                       <button
                         className="gm-btn-circle-action"
                         onClick={() => setActiveTab("programas")}
-                        title="Ver todas las rutinas"
+                        aria-label="Ver todas las rutinas"
                       >
-                        <MoreHorizontal size={20} />
+                        <ChevronRight size={20} />
                       </button>
                     </div>
                   </section>
@@ -666,34 +708,11 @@ export default function GymManeApp() {
               })()}
 
               {/* 2. Weekday Calendar Strip (Screenshot 1) */}
-              <div className="gm-weekday-strip">
-                {[
-                  { letter: "L", num: 2, status: "completed" },
-                  { letter: "M", num: 3, status: "completed" },
-                  { letter: "M", num: 4, status: "completed" },
-                  { letter: "J", num: 5, status: "completed" },
-                  { letter: "V", num: 6, status: "today" },
-                  { letter: "S", num: 7, status: "future" },
-                  { letter: "D", num: 8, status: "future" },
-                ].map((d, i) => (
-                  <div key={i} className="gm-day-item">
-                    <span className="gm-day-letter">{d.letter}</span>
-                    <div className={`gm-day-bubble ${d.status}`}>
-                      {d.status === "completed" ? (
-                        <Check size={14} strokeWidth={3} />
-                      ) : (
-                        d.num
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 3. GLP-1 Metabolic Telemetry Card */}
-              <section className="gm-card">
+              {/* 3. Personal tracking card */}
+              <section className="gm-card gm-dashboard-tracking">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span className="card-eyebrow" style={{ color: "var(--accent-emerald)" }}>
-                    ESTADO METABÓLICO GLP-1
+                    SEGUIMIENTO PERSONAL
                   </span>
                   <span className="gm-pill-btn active" style={{ padding: "4px 10px", fontSize: "0.72rem" }}>
                     {currentMed.name.split(" ")[0]} · {profile.currentDose}
@@ -708,16 +727,16 @@ export default function GymManeApp() {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", padding: "8px 0", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
-                  <span>Próxima dosis: <strong style={{ color: "#FFFFFF" }}>en {overview.daysUntilNextInjection} días</strong></span>
+                  <span>Próxima dosis: <strong style={{ color: "var(--text-primary)" }}>en {overview.daysUntilNextInjection} días</strong></span>
                   <span>Zona sugerida: <strong style={{ color: "var(--accent-emerald)" }}>{overview.nextSiteSuggestion.short}</strong></span>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="gm-dashboard-actions">
                   <button
                     className="gm-pill-btn"
                     onClick={() => {
+                      trackingTarget.current = "tracking-injection";
                       setActiveTab("seguimiento");
-                      setTrackingSubView("injection");
                     }}
                   >
                     <Syringe size={15} /> Registrar Dosis
@@ -725,8 +744,8 @@ export default function GymManeApp() {
                   <button
                     className="gm-pill-btn"
                     onClick={() => {
+                      trackingTarget.current = "tracking-symptoms";
                       setActiveTab("seguimiento");
-                      setTrackingSubView("symptoms");
                     }}
                   >
                     <HeartPulse size={15} /> Registrar Síntoma
@@ -761,7 +780,7 @@ export default function GymManeApp() {
                         cy="70"
                         r="60"
                         fill="none"
-                        stroke="#1C1C24"
+                        stroke="var(--md-outline-variant)"
                         strokeWidth="10"
                       />
                       <circle
@@ -783,10 +802,10 @@ export default function GymManeApp() {
                     </div>
                   </div>
 
-                  {/* Right: Quemadas */}
+                  {/* Right: daily goal */}
                   <div className="gm-ring-stat-col right">
-                    <span className="gm-ring-stat-num num-tabular">350</span>
-                    <span className="gm-ring-stat-label">Quemadas</span>
+                    <span className="gm-ring-stat-num num-tabular">{overview.caloriesGoal}</span>
+                    <span className="gm-ring-stat-label">Meta diaria</span>
                   </div>
                 </div>
 
@@ -863,25 +882,11 @@ export default function GymManeApp() {
 
               {/* 5. Weekly Summary Stats (Screenshot 1) */}
               <section className="gm-card">
-                <span className="card-eyebrow">ESTA SEMANA</span>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, textAlign: "center" }}>
-                  <div>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Volumen</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 900, marginTop: 2 }}>9.4<span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>t</span></div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Series</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 900, marginTop: 2 }}>20</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Récords</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 900, marginTop: 2, color: "var(--accent-amber)" }}>2</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>Días</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 900, marginTop: 2, color: "var(--accent-emerald)" }}>4/4</div>
-                  </div>
-                </div>
+                <span className="card-eyebrow">ÚLTIMOS 7 DÍAS</span>
+                <p className="gm-weekly-stat">
+                  <strong className="num-tabular">{overview.weeklyWorkoutsCount}</strong>
+                  Entrenamientos registrados
+                </p>
               </section>
             </div>
           )}
@@ -895,13 +900,13 @@ export default function GymManeApp() {
               {liveWorkout ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Active Header */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#121215", padding: "14px 18px", borderRadius: 24, border: "1px solid var(--border-medium)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-card)", padding: "14px 18px", borderRadius: 24, border: "1px solid var(--border-medium)" }}>
                     <div>
                       <span className="card-eyebrow" style={{ color: "var(--accent-orange)" }}>SESIÓN EN VIVO</span>
                       <h3 style={{ fontSize: "1.2rem", fontWeight: 900 }}>{liveWorkout.dayName}</h3>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#FFFFFF" }} className="num-tabular">
+                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--text-primary)" }} className="num-tabular">
                         {Math.floor(liveDuration / 60).toString().padStart(2, "0")}:
                         {(liveDuration % 60).toString().padStart(2, "0")}
                       </div>
@@ -926,7 +931,7 @@ export default function GymManeApp() {
                               {ex.targetSets} series · Meta: {ex.targetReps} reps
                             </span>
                           </div>
-                          {exInfo?.slug && (
+                          {exInfo && (
                             <button
                               className="gm-pill-btn"
                               style={{ padding: "4px 10px", fontSize: "0.72rem" }}
@@ -1122,7 +1127,7 @@ export default function GymManeApp() {
                             justifyContent: "space-between",
                             alignItems: "center",
                             padding: "10px 14px",
-                            background: "#16161B",
+                            background: "var(--bg-card-hover)",
                             borderRadius: 14,
                             cursor: "pointer",
                           }}
@@ -1148,11 +1153,11 @@ export default function GymManeApp() {
           {/* TAB 3: PROGRAMAS (12 RUTINAS COMPLETAS) */}
           {/* ========================================================================= */}
           {activeTab === "programas" && (
-            <div className="tab-pane-view">
+            <div className="tab-pane-view gm-program-grid">
               <div className="gm-train-focus-header">
                 <h2 className="gm-focus-title">PROGRAMAS</h2>
                 <p className="gm-focus-subtitle">
-                  12 rutinas estructuradas: 4 anti-flacidez GLP-1 y 8 clásicos de fuerza.
+                  12 rutinas estructuradas: 4 adaptadas y 8 clásicas de fuerza.
                 </p>
               </div>
 
@@ -1164,7 +1169,7 @@ export default function GymManeApp() {
                       <div>
                         {prog.isGlp1Special && (
                           <span className="gm-pill-btn active" style={{ padding: "3px 8px", fontSize: "0.68rem", marginBottom: 6, display: "inline-block" }}>
-                            ★ Anti-Flacidez GLP-1
+                            ★ Rutina adaptada
                           </span>
                         )}
                         <h3 style={{ fontSize: "1.15rem", fontWeight: 900 }}>{prog.name}</h3>
@@ -1179,7 +1184,7 @@ export default function GymManeApp() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#16161C", padding: 12, borderRadius: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "var(--bg-pitch)", padding: 12, borderRadius: 16 }}>
                       {prog.days.map((d, dIdx) => (
                         <div key={dIdx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
                           <span style={{ fontWeight: 700 }}>{d.dayName}</span>
@@ -1225,7 +1230,7 @@ export default function GymManeApp() {
 
                   <div className="gm-ring-center-wrapper">
                     <svg className="gm-ring-svg" viewBox="0 0 140 140">
-                      <circle cx="70" cy="70" r="60" fill="none" stroke="#1C1C24" strokeWidth="10" />
+                      <circle cx="70" cy="70" r="60" fill="none" stroke="var(--md-outline-variant)" strokeWidth="10" />
                       <circle
                         cx="70"
                         cy="70"
@@ -1323,7 +1328,7 @@ export default function GymManeApp() {
                 {/* Quick Foods Horizontal Row */}
                 <div style={{ marginTop: 6 }}>
                   <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, display: "block", marginBottom: 8 }}>
-                    ALIMENTOS RECOMENDADOS GLP-1
+                    ALIMENTOS RECOMENDADOS
                   </span>
                   <div className="gm-quick-foods-row">
                     {QUICK_FOODS.map((f, i) => (
@@ -1356,7 +1361,7 @@ export default function GymManeApp() {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          background: "#16161B",
+                          background: "var(--bg-card-hover)",
                           padding: "10px 14px",
                           borderRadius: 14,
                         }}
@@ -1379,9 +1384,9 @@ export default function GymManeApp() {
                 )}
               </div>
 
-              {/* Semáforo de alimentos GLP-1 */}
+              {/* Semáforo de alimentos */}
               <div className="gm-card">
-                <span className="card-eyebrow">SEMÁFORO DE TOLERANCIA DIGESTIVA GLP-1</span>
+                <span className="card-eyebrow">SEMÁFORO DE TOLERANCIA DIGESTIVA</span>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: 16, padding: 14 }}>
                     <div style={{ color: "var(--accent-emerald)", fontWeight: 800, fontSize: "0.85rem", marginBottom: 4 }}>
@@ -1434,7 +1439,7 @@ export default function GymManeApp() {
                   <svg className="gm-sparkline-svg" viewBox="0 0 100 30">
                     <polyline
                       fill="none"
-                      stroke="#FFFFFF"
+                      stroke="var(--text-primary)"
                       strokeWidth="2.5"
                       points="0,25 20,22 40,18 60,14 80,8 100,4"
                     />
@@ -1481,7 +1486,7 @@ export default function GymManeApp() {
               </div>
 
               {/* Injection Rotation 6 Zones */}
-              <div className="gm-card">
+              <div className="gm-card gm-tracking-panel" id="tracking-injection" tabIndex={-1}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span className="card-eyebrow">ROTACIÓN DE INYECCIÓN (6 ZONAS)</span>
                   <span style={{ fontSize: "0.78rem", color: "var(--accent-emerald)", fontWeight: 700 }}>
@@ -1498,7 +1503,7 @@ export default function GymManeApp() {
                         key={site.id}
                         onClick={() => setDoseSite(site.id)}
                         style={{
-                          background: isSelected ? "var(--accent-emerald-dim)" : "#18181E",
+                          background: isSelected ? "var(--accent-emerald-dim)" : "var(--bg-pitch)",
                           border: isSelected ? "1.5px solid var(--accent-emerald)" : isSuggested ? "1px dashed var(--accent-emerald)" : "1px solid var(--border-medium)",
                           borderRadius: 16,
                           padding: "12px 8px",
@@ -1531,8 +1536,8 @@ export default function GymManeApp() {
               </div>
 
               {/* Symptoms Registry */}
-              <div className="gm-card">
-                <span className="card-eyebrow">CONTROL DE SÍNTOMAS GLP-1</span>
+              <div className="gm-card gm-tracking-panel" id="tracking-symptoms" tabIndex={-1}>
+                <span className="card-eyebrow">CONTROL DE SÍNTOMAS</span>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {SYMPTOM_CATALOG.slice(0, 6).map((sym) => {
                     const isSel = selectedSymptomId === sym.id;
@@ -1541,8 +1546,8 @@ export default function GymManeApp() {
                         key={sym.id}
                         onClick={() => setSelectedSymptomId(sym.id)}
                         style={{
-                          background: isSel ? "#24242C" : "#16161B",
-                          border: isSel ? "1.5px solid #FFFFFF" : "1px solid var(--border-subtle)",
+                          background: isSel ? "var(--md-secondary-container)" : "var(--bg-card-hover)",
+                          border: isSel ? "1.5px solid var(--text-primary)" : "1px solid var(--border-subtle)",
                           borderRadius: 14,
                           padding: "10px",
                           textAlign: "left",
@@ -1551,7 +1556,7 @@ export default function GymManeApp() {
                         }}
                       >
                         <span style={{ fontSize: "0.85rem", fontWeight: 800 }}>{sym.name}</span>
-                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{sym.reliefGuide.slice(0, 32)}…</span>
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{sym.category}</span>
                       </button>
                     );
                   })}
@@ -1587,7 +1592,11 @@ export default function GymManeApp() {
         </main>
 
         {/* 3. Bottom Navigation Bar (GymMane Style) */}
-        <nav className="gm-bottom-bar" aria-label="Navegación principal">
+        <nav
+          className="gm-bottom-bar"
+          aria-label="Navegación principal"
+          style={{ "--active-index": NAV_DESTINATIONS.findIndex((dest) => dest.id === activeTab) }}
+        >
           {NAV_DESTINATIONS.map((dest) => {
             const Icon = dest.icon;
             const isActive = activeTab === dest.id;
@@ -1595,6 +1604,7 @@ export default function GymManeApp() {
               <button
                 key={dest.id}
                 className={`gm-nav-btn ${isActive ? "active" : ""}`}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => setActiveTab(dest.id)}
               >
                 <div className="gm-nav-icon-wrap">
@@ -1610,27 +1620,26 @@ export default function GymManeApp() {
       {/* Modal Sheet for Exercise Technique Animation */}
       {activeExerciseModal && (
         <div className="gm-modal-overlay" onClick={() => setActiveExerciseModal(null)}>
-          <div className="gm-modal-sheet" onClick={(e) => e.stopPropagation()}>
+          <div className="gm-modal-sheet gm-technique-sheet" role="dialog" aria-modal="true" aria-labelledby="exercise-technique-title" onClick={(e) => e.stopPropagation()}>
             <div className="gm-modal-handle"></div>
             <div className="gm-modal-header">
               <div>
                 <span className="card-eyebrow">TÉCNICA DE EJERCICIO</span>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 900 }}>{activeExerciseModal.name}</h3>
+                <h3 id="exercise-technique-title" style={{ fontSize: "1.25rem", fontWeight: 900 }}>{activeExerciseModal.name}</h3>
               </div>
-              <button className="m3-icon-button" onClick={() => setActiveExerciseModal(null)}>
+              <button className="m3-icon-button" onClick={() => setActiveExerciseModal(null)} aria-label="Cerrar técnica">
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ background: "#F8FAFC", borderRadius: 20, padding: 12, display: "flex", justifyContent: "center" }}>
-              <ExerciseArt slug={activeExerciseModal.slug} height={200} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-muted)" }}>INSTRUCCIONES CLÍNICAS</div>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                {activeExerciseModal.instructions || "Mantén la postura erguida, controla el movimiento en fase excéntrica y concéntrate en la contracción muscular."}
-              </p>
+            <div className="gm-technique-content">
+              <ExerciseArt key={activeExerciseModal.id} slug={activeExerciseModal.art} />
+              <span className="card-eyebrow">PASOS DEL EJERCICIO</span>
+              {activeExerciseModal.steps?.length > 0 && (
+                <ol className="exercise-steps">
+                  {activeExerciseModal.steps.map((step) => <li key={step}>{step}</li>)}
+                </ol>
+              )}
             </div>
           </div>
         </div>
@@ -1643,10 +1652,27 @@ export default function GymManeApp() {
             <div className="gm-modal-handle"></div>
             <div className="gm-modal-header">
               <h3 style={{ fontSize: "1.25rem", fontWeight: 900 }}>Perfil & Ajustes</h3>
-              <button className="m3-icon-button" onClick={() => setSettingsOpen(false)}>
+              <button className="m3-icon-button" onClick={() => setSettingsOpen(false)} aria-label="Cerrar ajustes">
                 <X size={20} />
               </button>
             </div>
+
+            <fieldset className="gm-appearance">
+              <legend className="card-eyebrow">Apariencia</legend>
+              <div className="gm-appearance-options">
+                {APPEARANCE_OPTIONS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`gm-pill-btn ${appearance === id ? "active" : ""}`}
+                    aria-pressed={appearance === id}
+                    onClick={() => selectAppearance(id)}
+                  >
+                    <Icon size={16} aria-hidden="true" /> {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>

@@ -1,6 +1,6 @@
 {
   "appId": "com.gymmane.glp1",
-  "appName": "GymMane GLP-1",
+  "appName": "GymMane",
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {

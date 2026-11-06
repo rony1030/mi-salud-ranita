@@ -114,7 +114,7 @@ export default function BodyMap({
           </div>
           <div className="mini-legend-item">
             <span className="dot emerald"></span>
-            <span>Prioridad GLP-1</span>
+            <span>Músculos prioritarios</span>
           </div>
           <div className="mini-legend-item">
             <span className="dot slate"></span>

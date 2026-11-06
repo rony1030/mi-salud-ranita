@@ -33,11 +33,11 @@ async function main() {
   }
   fs.copyFileSync(standaloneHtml, path.join(WORK_DIR, "assets", "index.html"));
   fs.copyFileSync(artBundleJs, path.join(WORK_DIR, "assets", "art-bundle.js"));
-  if (fs.existsSync(path.join(rootDir, "dist-apk", "icon.svg"))) {
-    fs.copyFileSync(path.join(rootDir, "dist-apk", "icon.svg"), path.join(WORK_DIR, "assets", "icon.svg"));
+  for (const asset of ["icon.svg", "logo.svg", "apple-touch-icon.png", "manifest.webmanifest"]) {
+    fs.copyFileSync(path.join(rootDir, "dist-apk", asset), path.join(WORK_DIR, "assets", asset));
   }
 
-  // 2. Write AndroidManifest.xml (versionCode 3 / 2.0.0 GymMane GLP-1)
+  // 2. Write AndroidManifest.xml (versionCode 3 / 2.0.0 GymMane)
   const manifestXml = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.gymmane.glp1"
@@ -71,44 +71,21 @@ async function main() {
   // 3. Write strings.xml and GymMane vector icon drawable
   const stringsXml = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">GymMane GLP-1</string>
+    <string name="app_name">GymMane</string>
 </resources>`;
   fs.writeFileSync(path.join(WORK_DIR, "res", "values", "strings.xml"), stringsXml, "utf8");
 
-  // Athletic Dumbbell & Clinical Pulse Vector Icon
+  // GymMane monogram, adapted to Android VectorDrawable.
   const iconXml = `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="100"
     android:viewportHeight="100">
-    <!-- Obsidian Dark Background -->
-    <path
-        android:fillColor="#0D0D0F"
-        android:pathData="M0,0h100v100h-100z" />
-    <!-- GymMane Orange Dumbbell Left Plate -->
-    <path
-        android:fillColor="#FF6B35"
-        android:pathData="M24,30 h8 v40 h-8 z" />
-    <!-- GymMane Orange Dumbbell Right Plate -->
-    <path
-        android:fillColor="#FF6B35"
-        android:pathData="M68,30 h8 v40 h-8 z" />
-    <!-- Steel Bar -->
-    <path
-        android:fillColor="#F4F4F6"
-        android:pathData="M32,46 h36 v8 h-36 z" />
-    <!-- Clinical Emerald Shield & Pulse -->
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M50,60 L62,67 C62,80 50,88 50,88 C50,88 38,80 38,67 Z" />
-    <!-- ECG pulse line -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M43,73 L47,73 L49,69 L51,77 L53,71 L55,73 L57,73" />
+    <path android:fillColor="#0C1021" android:pathData="M24,0h52a24,24 0,0 1,24 24v52a24,24 0,0 1,-24 24h-52a24,24 0,0 1,-24 -24v-52a24,24 0,0 1,24 -24z" />
+    <path android:strokeColor="#BDD4FF" android:strokeWidth="7.5"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M72,31 L53,21 26,36 26,65 50,79 74,65 74,51 61,51 50,63 39,51 39,62" />
 </vector>`;
   fs.writeFileSync(path.join(WORK_DIR, "res", "drawable", "ic_launcher.xml"), iconXml, "utf8");
 
@@ -258,7 +235,7 @@ async function main() {
       "-keypass",
       "gymmane123",
       "-dname",
-      "CN=GymMane GLP-1, OU=Fitness, O=GymMane, L=SantoDomingo, ST=DO, C=DO",
+      "CN=GymMane, OU=Fitness, O=GymMane, L=SantoDomingo, ST=DO, C=DO",
     ],
     { stdio: "inherit" }
   );
