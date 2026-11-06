@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 
-const AAPT2 = "/tmp/apk-tools/node_modules/aaptjs3/bin/x64/linux/aapt2";
+const localAapt2 = path.join(rootDir, "node_modules", "aaptjs3", "bin", "x64", "linux", "aapt2");
+const AAPT2 = fs.existsSync(localAapt2) ? localAapt2 : "/tmp/apk-tools/node_modules/aaptjs3/bin/x64/linux/aapt2";
 const SMALI_JAR = "/tmp/apk-tools/smali.jar";
 const ANDROID_JAR = "/tmp/apk-tools/platforms/android-33/android.jar";
 const WORK_DIR = "/tmp/apk-build-gymmane";
@@ -262,7 +263,12 @@ async function main() {
     { stdio: "inherit" }
   );
 
-  const apkSignModule = await import("/tmp/apk-tools/node_modules/apk_sign_ts/dist/index.js");
+  let apkSignModule;
+  try {
+    apkSignModule = await import("apk_sign_ts");
+  } catch {
+    apkSignModule = await import("/tmp/apk-tools/node_modules/apk_sign_ts/dist/index.js");
+  }
   const { ApkSigner, SigningKey, convertToPEM } = apkSignModule;
 
   const jksBytes = new Uint8Array(fs.readFileSync(keystorePath));

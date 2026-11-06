@@ -17,7 +17,7 @@ export default function BodyMap({
   sex = "female",
   selectedMuscles = [],
   onToggleMuscle,
-  highlightPriority = false,
+  highlightPriority = true,
 }) {
   const isFemale = sex === "female";
   const baseMain = isFemale ? femaleBaseMain : bodyBaseMain;
@@ -30,31 +30,32 @@ export default function BodyMap({
   return (
     <div className="bodymap-wrapper">
       <div className="bodymap-stage">
-        <div className="bodymap-labels-top">
-          <span>Vista Frontal</span>
-          <span>Vista Posterior</span>
+        <div className="bodymap-header-row">
+          <span className="bodymap-view-label">FRENTE</span>
+          <span className="bodymap-view-label">ESPALDA</span>
         </div>
+
         <svg
           viewBox={`0 0 ${bodyViewW} ${bodyViewH}`}
           className="bodymap-svg"
           role="img"
           aria-label="Mapa anatómico interactivo GymMane"
         >
-          {/* Base anatomical silhouette in dark theme */}
+          {/* Base anatomical silhouette in deep dark slate */}
           <g className="bodymap-base-main">
             {baseMain.map((d, i) => (
-              <path key={`bm-${i}`} d={d} fill="#272730" stroke="#16161A" strokeWidth="0.5" />
+              <path key={`bm-${i}`} d={d} fill="#18181D" stroke="#0E0E12" strokeWidth="0.8" />
             ))}
           </g>
           <g className="bodymap-base-lite">
             {baseLite.map((d, i) => (
-              <path key={`bl-${i}`} d={d} fill="#32323E" />
+              <path key={`bl-${i}`} d={d} fill="#24242C" />
             ))}
           </g>
           {headPaths.length > 0 && (
             <g className="bodymap-head">
               {headPaths.map((d, i) => (
-                <path key={`bh-${i}`} d={d} fill="#272730" />
+                <path key={`bh-${i}`} d={d} fill="#18181D" />
               ))}
             </g>
           )}
@@ -64,18 +65,18 @@ export default function BodyMap({
             const isSelected = selectedSet.has(muscleId);
             const isPriority = highlightPriority && MUSCLE_LABELS[muscleId]?.priorityGlp1;
 
-            let fillColor = "#3F3F4E";
-            let strokeColor = "transparent";
-            let strokeWidth = "0.4";
+            let fillColor = "#2C2C36";
+            let strokeColor = "#1A1A22";
+            let strokeWidth = "0.5";
 
             if (isSelected) {
-              fillColor = "#FF6B35"; // GymMane athletic orange
-              strokeColor = "#FFA07A";
-              strokeWidth = "1.8";
+              fillColor = "#FFFFFF"; // High-contrast crisp white like GymMane original
+              strokeColor = "#FF8A65";
+              strokeWidth = "1.5";
             } else if (isPriority) {
-              fillColor = "#1E3A34"; // Dark emerald base
-              strokeColor = "#10B981"; // Emerald border
-              strokeWidth = "1.2";
+              fillColor = "#1D2F28"; // Subtle emerald tint
+              strokeColor = "rgba(16, 185, 129, 0.4)";
+              strokeWidth = "1";
             }
 
             return (
@@ -86,7 +87,7 @@ export default function BodyMap({
                 style={{ cursor: "pointer" }}
               >
                 <title>
-                  {MUSCLE_LABELS[muscleId]?.name || muscleId} — Toca para filtrar
+                  {MUSCLE_LABELS[muscleId]?.name || muscleId} — Toca para seleccionar
                 </title>
                 {paths.map((d, idx) => (
                   <path
@@ -96,7 +97,8 @@ export default function BodyMap({
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
                     style={{
-                      transition: "fill 0.18s ease, stroke 0.18s ease, transform 0.18s ease",
+                      transition: "fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease",
+                      filter: isSelected ? "drop-shadow(0 0 6px rgba(255,255,255,0.4))" : "none",
                     }}
                   />
                 ))}
@@ -105,17 +107,17 @@ export default function BodyMap({
           })}
         </svg>
 
-        <div className="bodymap-legend">
-          <div className="legend-item">
-            <span className="legend-dot orange"></span>
+        <div className="bodymap-mini-legend">
+          <div className="mini-legend-item">
+            <span className="dot white"></span>
             <span>Seleccionado</span>
           </div>
-          <div className="legend-item">
-            <span className="legend-dot emerald"></span>
-            <span>Prioridad Anti-Flacidez</span>
+          <div className="mini-legend-item">
+            <span className="dot emerald"></span>
+            <span>Prioridad GLP-1</span>
           </div>
-          <div className="legend-item">
-            <span className="legend-dot neutral"></span>
+          <div className="mini-legend-item">
+            <span className="dot slate"></span>
             <span>Músculo</span>
           </div>
         </div>

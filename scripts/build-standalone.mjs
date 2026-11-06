@@ -15,8 +15,7 @@ function optimizeSvgPath(d) {
 }
 
 async function main() {
-  const esbuildPath = "/tmp/apk-tools/node_modules/esbuild/lib/main.js";
-  const esbuild = await import(esbuildPath);
+  const esbuild = await import("esbuild");
 
   // 1. Read and optimize all 109 exercise SVG animation files (first 2 key frames per exercise)
   const artDir = path.join(rootDir, "public", "art");
