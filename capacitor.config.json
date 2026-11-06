@@ -1,0 +1,9 @@
+{
+  "appId": "com.misalud.ranitaglp1",
+  "appName": "Mi Salud Ranita GLP-1",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

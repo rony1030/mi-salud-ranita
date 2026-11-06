@@ -1,0 +1,72 @@
+name: Generar APK Android (Mi Salud Ranita GLP-1)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies and build static Next.js app (out/)
+        run: |
+          npm install
+          npm run build
+          ls -la out/
+
+      - name: Initialize Capacitor Android project
+        run: |
+          npm install --no-save @capacitor/core@^7.0.0 @capacitor/cli@^7.0.0 @capacitor/android@^7.0.0
+          npx cap add android
+          npx cap sync android
+
+      - name: Configure Android status bar & allow cleartext/local assets
+        run: |
+          chmod +x android/gradlew
+
+      - name: Build installable Android APK
+        working-directory: android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../Mi-Salud-Ranita-GLP1.apk
+          ls -lh ../Mi-Salud-Ranita-GLP1.apk
+
+      - name: Upload APK as GitHub Actions Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mi-Salud-Ranita-GLP1-APK
+          path: Mi-Salud-Ranita-GLP1.apk
+
+      - name: Publish APK to GitHub Releases (v1.0.0)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release upload v1.0.0 Mi-Salud-Ranita-GLP1.apk --clobber
+          else
+            gh release create v1.0.0 Mi-Salud-Ranita-GLP1.apk \
+              --title "🐸 Mi Salud Ranita GLP-1 v1.0.0 (APK Android)" \
+              --notes "Descarga directa del instalador Android (**Mi-Salud-Ranita-GLP1.apk**) para Mounjaro / Ozempic: seguimiento semanal de inyecciones y peso, guía de dieta sugerida, control de síntomas, mascota Ranita con semáforo y mapa muscular GymMane con 115 ejercicios animados offline."
+          fi
