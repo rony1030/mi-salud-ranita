@@ -4,12 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
-  AlertTriangle,
-  Award,
   Calendar,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Clock,
   Download,
@@ -22,7 +19,6 @@ import {
   LayoutDashboard,
   Play,
   Plus,
-  RefreshCw,
   RotateCcw,
   Scale,
   Search,
@@ -36,7 +32,6 @@ import {
   Upload,
   User,
   Utensils,
-  Volume2,
   X,
   Zap,
 } from "lucide-react";
@@ -63,7 +58,7 @@ import {
   offsetDate,
 } from "../lib/glp1-data.mjs";
 
-const NAV_TABS = [
+const NAV_DESTINATIONS = [
   { id: "hoy", label: "Hoy", icon: LayoutDashboard },
   { id: "entrenar", label: "Entrenar", icon: Dumbbell },
   { id: "programas", label: "Programas", icon: Layers },
@@ -80,14 +75,14 @@ function playBeepSound() {
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.45);
   } catch {
-    // Ignore audio autoplay restrictions
+    // Ignore audio restrictions
   }
 }
 
@@ -98,7 +93,7 @@ export default function GymManeApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(() => todayISO());
 
-  // Subview toggles within tabs
+  // Subview toggles within tabs (M3 Segmented Buttons)
   const [trainSubView, setTrainSubView] = useState("library"); // 'library' | 'live'
   const [nutriSubView, setNutriSubView] = useState("diary"); // 'diary' | 'traffic' | 'phase_menu'
   const [trackingSubView, setTrackingSubView] = useState("injection"); // 'injection' | 'symptoms' | 'progress'
@@ -117,13 +112,8 @@ export default function GymManeApp() {
   const [restTotal, setRestTotal] = useState(60);
   const [restActive, setRestActive] = useState(false);
 
-  // Program filters & Custom routine modal
-  const [programFilter, setProgramFilter] = useState("all"); // 'all' | 'glp1' | 'classic' | 'custom'
-  const [customModalOpen, setCustomModalOpen] = useState(false);
-  const [newRoutineName, setNewRoutineName] = useState("");
-  const [newRoutineDays, setNewRoutineDays] = useState("3 días/sem");
-  const [newRoutineFocus, setNewRoutineFocus] = useState("");
-  const [newRoutineExercises, setNewRoutineExercises] = useState([]);
+  // Program filters
+  const [programFilter, setProgramFilter] = useState("all"); // 'all' | 'glp1' | 'classic'
 
   // Food log state
   const [foodFilter, setFoodFilter] = useState("green");
@@ -167,7 +157,6 @@ export default function GymManeApp() {
     }
   }, []);
 
-  // Save to localStorage
   const saveState = (updater) => {
     setState((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
@@ -202,7 +191,7 @@ export default function GymManeApp() {
         if (sec <= 1) {
           setRestActive(false);
           playBeepSound();
-          showToast("⏱️ ¡Descanso finalizado! Lista para la siguiente serie.");
+          showToast("Pausa concluida · Inicia la siguiente serie");
           return 0;
         }
         return sec - 1;
@@ -221,12 +210,6 @@ export default function GymManeApp() {
     if (!state) return null;
     return computeWellnessOverview(state, currentDate);
   }, [state, currentDate]);
-
-  const allRoutines = useMemo(() => {
-    const builtIn = GLP1_ROUTINES;
-    const custom = state?.customRoutines || [];
-    return [...builtIn, ...custom];
-  }, [state?.customRoutines]);
 
   const filteredExercises = useMemo(() => {
     return EXERCISES.filter((ex) => {
@@ -250,7 +233,7 @@ export default function GymManeApp() {
   // Start live workout from a routine
   const startWorkoutFromRoutine = (routine, dayIndex = 0) => {
     const day = routine.days[dayIndex] || routine.days[0];
-    const exercisesInSession = day.exercises.map((item, idx) => {
+    const exercisesInSession = day.exercises.map((item) => {
       const catalogInfo = getExerciseById(item.id) || {
         id: item.id,
         name: "Ejercicio",
@@ -285,10 +268,9 @@ export default function GymManeApp() {
     setLiveSeconds(0);
     setTrainSubView("live");
     setActiveTab("entrenar");
-    showToast(`🏋️ Sesión iniciada: ${routine.name}`);
+    showToast(`Sesión activa: ${routine.name}`);
   };
 
-  // Complete a set in live workout
   const toggleSetComplete = (exerciseIdx, setIdx) => {
     if (!liveWorkout) return;
     const nextExercises = [...liveWorkout.exercises];
@@ -301,7 +283,6 @@ export default function GymManeApp() {
     setLiveWorkout({ ...liveWorkout, exercises: nextExercises });
 
     if (willBeCompleted) {
-      // Check PR
       const weightNum = parseFloat(targetSet.weight) || 0;
       const repsNum = parseInt(targetSet.reps, 10) || 0;
       if (weightNum > 0) {
@@ -318,14 +299,13 @@ export default function GymManeApp() {
               },
             },
           }));
-          showToast(`🏆 ¡NUEVO RÉCORD PERSONAL (PR) en ${targetEx.catalog.name}! ${weightNum} ${state?.profile?.unit || "lb"}`);
+          showToast(`Nuevo Récord Personal (PR): ${weightNum} ${state?.profile?.unit || "lb"}`);
         }
       }
       startRestTimer(targetEx.restSec || 60);
     }
   };
 
-  // Finish live workout
   const finishLiveWorkout = () => {
     if (!liveWorkout) return;
     let totalSetsDone = 0;
@@ -363,10 +343,9 @@ export default function GymManeApp() {
     setLiveWorkout(null);
     setRestActive(false);
     setTrainSubView("library");
-    showToast(`✅ ¡Entrenamiento completado! ${totalSetsDone} series finalizadas · ${totalVolume} ${state?.profile?.unit || "lb"} de volumen.`);
+    showToast(`Entrenamiento guardado · ${totalSetsDone} series · ${totalVolume} ${state?.profile?.unit || "lb"}`);
   };
 
-  // Water increment
   const addWaterGlass = () => {
     saveState((prev) => {
       const today = currentDate;
@@ -382,10 +361,9 @@ export default function GymManeApp() {
         },
       };
     });
-    showToast("💧 +1 Vaso de agua registrado (+250 ml)");
+    showToast("+250 ml de agua registrados");
   };
 
-  // Electrolytes toggle
   const toggleElectrolytes = () => {
     saveState((prev) => {
       const today = currentDate;
@@ -403,7 +381,6 @@ export default function GymManeApp() {
     });
   };
 
-  // Add meal from food guide
   const addFoodFromGuide = (foodItem, slot = "Almuerzo") => {
     saveState((prev) => {
       const today = currentDate;
@@ -431,10 +408,9 @@ export default function GymManeApp() {
         },
       };
     });
-    showToast(`🍴 Añadido a ${slot}: ${foodItem.name} (+${foodItem.protein}g proteína)`);
+    showToast(`Añadido a ${slot}: ${foodItem.name} (+${foodItem.protein}g proteína)`);
   };
 
-  // Remove meal
   const removeMeal = (mealId) => {
     saveState((prev) => {
       const today = currentDate;
@@ -451,10 +427,9 @@ export default function GymManeApp() {
         },
       };
     });
-    showToast("Eliminado del diario de hoy");
+    showToast("Alimento eliminado");
   };
 
-  // Add custom meal
   const addCustomMeal = (e) => {
     e.preventDefault();
     if (!customFoodName.trim()) return;
@@ -488,10 +463,9 @@ export default function GymManeApp() {
     setCustomFoodName("");
     setCustomFoodProtein("");
     setCustomFoodKcal("");
-    showToast(`🍴 Registrado: ${newMeal.name} (+${proteinNum}g proteína)`);
+    showToast(`Registrado: ${newMeal.name} (+${proteinNum}g proteína)`);
   };
 
-  // Add injection
   const handleAddInjection = (e) => {
     e.preventDefault();
     const wNum = parseFloat(injWeight) || state?.profile?.currentWeight || 0;
@@ -513,10 +487,9 @@ export default function GymManeApp() {
       },
     }));
     setInjNotes("");
-    showToast(`💉 Dosis semanal de ${injDose} registrada exitosamente.`);
+    showToast(`Dosis de ${injDose} guardada`);
   };
 
-  // Add symptom log
   const handleAddSymptomLog = (e) => {
     e.preventDefault();
     const symObj = SYMPTOM_CATALOG.find((s) => s.id === selectedSymptomId);
@@ -533,10 +506,9 @@ export default function GymManeApp() {
       symptomLogs: [newLog, ...(prev.symptomLogs || [])],
     }));
     setSymptomNote("");
-    showToast(`🩺 Síntoma registrado: ${symObj?.name} (${symptomSeverity})`);
+    showToast(`Síntoma reportado: ${symObj?.name}`);
   };
 
-  // Add weight entry
   const handleAddWeight = (e) => {
     e.preventDefault();
     const w = parseFloat(newWeightVal);
@@ -563,20 +535,18 @@ export default function GymManeApp() {
     setNewWaistCm("");
     setNewHipCm("");
     setNewWeightNote("");
-    showToast(`⚖️ Peso actualizado a ${w} ${state?.profile?.unit || "lb"}`);
+    showToast(`Peso actualizado: ${w} ${state?.profile?.unit || "lb"}`);
   };
 
-  // Export JSON backup
   const exportBackup = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
     const dlAnchorElem = document.createElement("a");
     dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `GymMane-GLP1-Backup-${todayISO()}.json`);
+    dlAnchorElem.setAttribute("download", `GymMane-GLP1-${todayISO()}.json`);
     dlAnchorElem.click();
-    showToast("💾 Respaldo JSON descargado");
+    showToast("Respaldo exportado");
   };
 
-  // Import JSON backup
   const importBackup = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -586,13 +556,13 @@ export default function GymManeApp() {
         const imported = JSON.parse(event.target.result);
         if (imported && imported.profile) {
           saveState(imported);
-          showToast("✅ Respaldo restaurado con éxito");
+          showToast("Datos restaurados correctamente");
           setSettingsOpen(false);
         } else {
-          showToast("❌ Archivo de respaldo no válido");
+          showToast("Archivo no válido");
         }
       } catch {
-        showToast("❌ Error al leer archivo JSON");
+        showToast("Error al procesar archivo");
       }
     };
     reader.readAsText(file);
@@ -602,7 +572,7 @@ export default function GymManeApp() {
     return (
       <main className="loading-screen">
         <div className="loading-card">
-          <Dumbbell className="spin-icon" size={42} color="#FF6B35" />
+          <Dumbbell className="spin-icon" size={40} color="#FF8A65" />
           <p className="loading-text">Cargando GymMane GLP-1…</p>
         </div>
       </main>
@@ -614,36 +584,38 @@ export default function GymManeApp() {
   const unitLabel = profile.unit || "lb";
 
   return (
-    <div className="app-viewport">
-      {/* Top Header Bar */}
-      <header className="app-header">
-        <div className="header-brand" onClick={() => setActiveTab("hoy")}>
-          <div className="header-logo-badge">
-            <Dumbbell size={20} color="#FF6B35" />
+    <div className="adaptive-app-shell">
+      {/* 1. M3 Navigation Rail (Tablet / Desktop >= 768px - adaptive-apps-samples) */}
+      <aside className="m3-navigation-rail" aria-label="Navegación lateral adaptativa">
+        <div className="rail-top-group">
+          <div className="rail-brand-logo" onClick={() => setActiveTab("hoy")} title="GymMane GLP-1">
+            <Dumbbell size={22} />
           </div>
-          <div>
-            <h1 className="header-title">GymMane</h1>
-            <div className="header-subtitle-tag">
-              <span className="dot-glp1"></span> GLP-1 CLINICAL
-            </div>
+
+          <div className="rail-nav-items">
+            {NAV_DESTINATIONS.map((dest) => {
+              const Icon = dest.icon;
+              const isActive = activeTab === dest.id;
+              return (
+                <button
+                  key={dest.id}
+                  className={`rail-item-btn ${isActive ? "active" : ""}`}
+                  onClick={() => setActiveTab(dest.id)}
+                  title={dest.label}
+                >
+                  <div className="rail-indicator-pill">
+                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  </div>
+                  <span className="rail-label">{dest.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="header-right-actions">
-          <div className="header-user-badge" onClick={() => setSettingsOpen(true)}>
-            <div className="user-avatar-circle">
-              <User size={14} />
-            </div>
-            <div className="user-info-text">
-              <span className="user-name">{profile.name}</span>
-              <span className="user-weight">
-                {overview.latestWeight} {unitLabel}
-              </span>
-            </div>
-          </div>
-
+        <div className="rail-bottom-group">
           <button
-            className="header-icon-btn"
+            className="m3-icon-button"
             onClick={() => setSettingsOpen(true)}
             aria-label="Ajustes de Perfil"
             title="Ajustes de Perfil"
@@ -651,718 +623,658 @@ export default function GymManeApp() {
             <SettingsIcon size={20} />
           </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Floating Rest Timer (Active Workout) */}
-      {restActive && (
-        <aside className="floating-rest-timer">
-          <div className="rest-timer-left">
-            <Timer className="timer-pulse" size={20} color="#FF6B35" />
+      {/* 2. Main Adaptive Content Area */}
+      <div className="adaptive-main-area">
+        {/* M3 Top App Bar */}
+        <header className="m3-top-app-bar">
+          <div className="top-bar-headline-group" onClick={() => setActiveTab("hoy")} style={{ cursor: "pointer" }}>
             <div>
-              <div className="rest-timer-label">DESCANSO ENTRE SERIES</div>
-              <div className="rest-timer-countdown">
-                {Math.floor(restSeconds / 60)}:{(restSeconds % 60).toString().padStart(2, "0")}
-              </div>
+              <h1 className="top-bar-title">GymMane</h1>
+              <span className="top-bar-subtitle">Clinical GLP-1</span>
             </div>
           </div>
-          <div className="rest-timer-actions">
+
+          <div className="top-bar-trailing-group">
+            <div className="m3-profile-capsule" onClick={() => setSettingsOpen(true)} style={{ cursor: "pointer" }}>
+              <span className="capsule-badge-dot"></span>
+              <span>{profile.name}</span>
+              <span style={{ color: "var(--md-sys-color-outline)" }}>·</span>
+              <span className="num-tabular">
+                {overview.latestWeight} {unitLabel}
+              </span>
+            </div>
+
             <button
-              className="rest-action-btn plus"
-              onClick={() => setRestSeconds((s) => s + 15)}
-              title="+15 segundos"
+              className="m3-icon-button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Ajustes"
             >
-              +15s
-            </button>
-            <button
-              className="rest-action-btn skip"
-              onClick={() => {
-                setRestActive(false);
-                setRestSeconds(0);
-              }}
-            >
-              Saltar
+              <SettingsIcon size={20} />
             </button>
           </div>
-        </aside>
-      )}
+        </header>
 
-      {/* Live Workout Banner if running and user navigates elsewhere */}
-      {liveWorkout && activeTab !== "entrenar" && (
-        <div className="live-workout-sticky-bar" onClick={() => setActiveTab("entrenar")}>
-          <div className="sticky-bar-info">
-            <span className="recording-dot"></span>
-            <strong>Entrenamiento activo:</strong> {liveWorkout.routineName} (
-            {Math.floor(liveSeconds / 60)}:{(liveSeconds % 60).toString().padStart(2, "0")})
-          </div>
-          <button className="sticky-bar-btn">Ver Sesión &rarr;</button>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <main className="app-main-content">
-        {/* ========================================================================= */}
-        {/* TAB 1: HOY (DASHBOARD) */}
-        {/* ========================================================================= */}
-        {activeTab === "hoy" && (
-          <section className="tab-section tab-fade-in">
-            {/* Treatment Hero Card */}
-            <div className="treatment-hero-card">
-              <div className="treatment-badge-row">
-                <span className="clinical-pill">
-                  <ShieldCheck size={14} /> {currentMed.name}
-                </span>
-                <span className="dose-pill">{profile.currentDose}</span>
-                <span className="goal-pill">
-                  Meta: {profile.goalWeight} {unitLabel}
-                </span>
-              </div>
-
-              <div className="hero-status-message">
-                <h2 className="status-title">{overview.title}</h2>
-                <p className="status-caption">{overview.caption}</p>
-              </div>
-
-              {/* 7-Day Cycle Progress Bar */}
-              <div className="cycle-bar-box">
-                <div className="cycle-bar-header">
-                  <span className="cycle-label">
-                    DÍA {overview.daysSinceInjection !== null ? overview.daysSinceInjection + 1 : 1} DE 7
-                  </span>
-                  <span className="cycle-phase-name">{overview.cyclePhase.title.split("·")[1] || "Ciclo Semanal"}</span>
+        {/* Floating Rest Timer Sheet (When Active) */}
+        {restActive && (
+          <aside className="m3-rest-floating-sheet">
+            <div className="rest-left-meta">
+              <Timer size={20} color="var(--md-sys-color-primary)" />
+              <div>
+                <div className="rest-title-eyebrow">Descanso Entre Series</div>
+                <div className="rest-countdown-clock num-tabular">
+                  {Math.floor(restSeconds / 60)}:{(restSeconds % 60).toString().padStart(2, "0")}
                 </div>
-                <div className="cycle-track">
+              </div>
+            </div>
+            <div className="rest-timer-right">
+              <button
+                className="m3-btn-outlined"
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+                onClick={() => setRestSeconds((s) => s + 15)}
+              >
+                +15s
+              </button>
+              <button
+                className="m3-btn-tonal"
+                style={{ padding: "6px 14px", fontSize: "0.78rem" }}
+                onClick={() => {
+                  setRestActive(false);
+                  setRestSeconds(0);
+                }}
+              >
+                Continuar
+              </button>
+            </div>
+          </aside>
+        )}
+
+        {/* Scrollable Content */}
+        <main className="content-scroller">
+          {/* ========================================================================= */}
+          {/* TAB 1: HOY (DASHBOARD) */}
+          {/* ========================================================================= */}
+          {activeTab === "hoy" && (
+            <div className="tab-pane-view">
+              {/* 7-Day GLP-1 Cycle Card */}
+              <section className="m3-card primary-tint m3-cycle-block">
+                <div className="card-header-bar">
+                  <span className="card-header-eyebrow">Ciclo Semanal</span>
+                  <span className="treatment-active-pill">
+                    {currentMed.name.split(" ")[0]} · {profile.currentDose}
+                  </span>
+                </div>
+
+                <div className="cycle-hero-banner">
+                  <h2 className="cycle-hero-title">{overview.title}</h2>
+                  <p className="cycle-hero-desc">{overview.caption}</p>
+                </div>
+
+                {/* 7-Day Progress Track */}
+                <div className="cycle-seven-grid">
                   {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
                     const isPassed = overview.daysSinceInjection !== null && dayIdx < overview.daysSinceInjection;
                     const isCurrent = overview.daysSinceInjection === dayIdx;
                     return (
                       <div
                         key={dayIdx}
-                        className={`cycle-segment ${isPassed ? "passed" : ""} ${isCurrent ? "current" : ""}`}
+                        className={`cycle-day-box ${isPassed ? "passed" : ""} ${isCurrent ? "current" : ""}`}
                         title={`Día ${dayIdx + 1}`}
-                      ></div>
+                      >
+                        <span>D{dayIdx + 1}</span>
+                        <span className="cycle-day-sub">
+                          {isCurrent ? "Hoy" : isPassed ? "✓" : ""}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
-                <div className="cycle-footer-meta">
+
+                <div className="cycle-action-strip">
                   <span>
                     Próxima dosis en: <strong>{overview.daysUntilNextInjection} días</strong>
                   </span>
                   <span>
-                    Zona sugerida: <strong>{overview.nextSiteSuggestion.short}</strong>
+                    Sitio sugerido: <strong>{overview.nextSiteSuggestion.short}</strong>
                   </span>
                 </div>
-              </div>
 
-              <div className="hero-quick-actions">
-                <button
-                  className="quick-action-btn primary"
-                  onClick={() => {
-                    setActiveTab("seguimiento");
-                    setTrackingSubView("injection");
-                  }}
-                >
-                  <Syringe size={16} /> Registrar Dosis
-                </button>
-                <button
-                  className="quick-action-btn secondary"
-                  onClick={() => {
-                    setActiveTab("seguimiento");
-                    setTrackingSubView("symptoms");
-                  }}
-                >
-                  <HeartPulse size={16} /> Reportar Síntoma
-                </button>
-              </div>
-            </div>
-
-            {/* Nutrition & Macro Rings */}
-            <div className="dashboard-card">
-              <div className="card-header-row">
-                <h3 className="section-title">
-                  <Flame size={18} color="#FF6B35" /> Nutrición y Macros
-                </h3>
-                <button className="card-link-btn" onClick={() => setActiveTab("nutricion")}>
-                  Ver Diario &rarr;
-                </button>
-              </div>
-
-              <div className="macro-rings-grid">
-                {/* Protein - Hero Ring */}
-                <div className="macro-card hero-protein">
-                  <div className="macro-ring-svg-wrap">
-                    <svg viewBox="0 0 36 36" className="circular-chart emerald">
-                      <path
-                        className="circle-bg"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className="circle"
-                        strokeDasharray={`${overview.proteinPct}, 100`}
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="ring-center-value">
-                      <span className="big-num">{overview.totals.protein}g</span>
-                      <span className="unit-sub">de {overview.proteinGoal}g</span>
-                    </div>
-                  </div>
-                  <div className="macro-info-col">
-                    <div className="macro-badge-row">
-                      <span className="macro-name">PROTEÍNA</span>
-                      <span className="macro-pct-badge">{overview.proteinPct}%</span>
-                    </div>
-                    <p className="macro-tip">Protege tus glúteos y masa muscular contra la flacidez.</p>
-                  </div>
-                </div>
-
-                {/* Calories, Carbs, Fats Mini Rings */}
-                <div className="macro-mini-row">
-                  <div className="mini-macro-item">
-                    <span className="mini-macro-val">{overview.totals.kcal}</span>
-                    <span className="mini-macro-label">KCAL</span>
-                    <div className="mini-progress-bar">
-                      <div
-                        className="mini-progress-fill orange"
-                        style={{ width: `${Math.min(100, (overview.totals.kcal / overview.caloriesGoal) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="mini-macro-item">
-                    <span className="mini-macro-val">{overview.totals.carbs}g</span>
-                    <span className="mini-macro-label">CARBOS</span>
-                    <div className="mini-progress-bar">
-                      <div
-                        className="mini-progress-fill cyan"
-                        style={{ width: `${Math.min(100, (overview.totals.carbs / 150) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="mini-macro-item">
-                    <span className="mini-macro-val">{overview.totals.fat}g</span>
-                    <span className="mini-macro-label">GRASAS</span>
-                    <div className="mini-progress-bar">
-                      <div
-                        className="mini-progress-fill yellow"
-                        style={{ width: `${Math.min(100, (overview.totals.fat / 50) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Water & Electrolytes quick tracker */}
-              <div className="hydration-row">
-                <div className="water-glasses-col">
-                  <div className="water-label-top">
-                    <Droplets size={16} color="#38BDF8" />
-                    <span>
-                      Hidratación: <strong>{overview.waterGlasses}</strong> / {overview.waterGoal} vasos (
-                      {overview.waterGlasses * 250} ml)
-                    </span>
-                  </div>
-                  <div className="glasses-icons-list">
-                    {Array.from({ length: overview.waterGoal }, (_, idx) => (
-                      <span
-                        key={idx}
-                        className={`glass-icon ${idx < overview.waterGlasses ? "filled" : ""}`}
-                        onClick={addWaterGlass}
-                        title="Toca para registrar vaso"
-                      >
-                        💧
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="hydration-buttons-col">
-                  <button className="add-water-btn" onClick={addWaterGlass}>
-                    <Plus size={16} /> +1 Vaso
-                  </button>
-                  <label className="electrolytes-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={state.nutritionByDate?.[currentDate]?.electrolytes || false}
-                      onChange={toggleElectrolytes}
-                    />
-                    <span>Electrolitos</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Today's Workout Card */}
-            <div className="dashboard-card">
-              <div className="card-header-row">
-                <h3 className="section-title">
-                  <Dumbbell size={18} color="#FF6B35" /> Entrenamiento Programado
-                </h3>
-                <span className="streak-badge">
-                  <Zap size={14} /> {overview.weeklyWorkoutsCount} esta semana
-                </span>
-              </div>
-
-              {(() => {
-                const activeProg =
-                  allRoutines.find((r) => r.id === profile.activeProgramId) || GLP1_ROUTINES[0];
-                const dayOne = activeProg.days[0];
-                return (
-                  <div className="program-preview-box">
-                    <div className="program-preview-header">
-                      <div>
-                        <h4 className="prog-title">{activeProg.name}</h4>
-                        <p className="prog-day-name">{dayOne.dayName}</p>
-                      </div>
-                      <span className="prog-duration-chip">
-                        <Clock size={12} /> {activeProg.durationMin} min
-                      </span>
-                    </div>
-
-                    <div className="prog-exercises-pill-list">
-                      {dayOne.exercises.slice(0, 4).map((exItem) => {
-                        const exData = getExerciseById(exItem.id);
-                        return (
-                          <span key={exItem.id} className="exercise-pill">
-                            {exData?.name || "Ejercicio"}
-                          </span>
-                        );
-                      })}
-                      {dayOne.exercises.length > 4 && (
-                        <span className="exercise-pill more">+{dayOne.exercises.length - 4} más</span>
-                      )}
-                    </div>
-
-                    <div className="prog-actions-row">
-                      <button
-                        className="start-workout-cta-btn"
-                        onClick={() => startWorkoutFromRoutine(activeProg, 0)}
-                      >
-                        <Play size={16} fill="currentColor" /> Iniciar Sesión de Hoy
-                      </button>
-                      <button
-                        className="browse-all-btn"
-                        onClick={() => {
-                          setActiveTab("programas");
-                        }}
-                      >
-                        Cambiar Programa
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Quick Symptom Relief Pill (If any symptom today) */}
-            <div className="dashboard-card symptom-relief-card">
-              <div className="card-header-row">
-                <h3 className="section-title">
-                  <Sparkles size={18} color="#10B981" /> Alivio y Digestión GLP-1
-                </h3>
-                <button
-                  className="card-link-btn"
-                  onClick={() => {
-                    setActiveTab("seguimiento");
-                    setTrackingSubView("symptoms");
-                  }}
-                >
-                  Catálogo Clínico &rarr;
-                </button>
-              </div>
-
-              <div className="symptom-quick-chips">
-                {SYMPTOM_CATALOG.slice(0, 4).map((sym) => (
+                <div className="action-grid-2">
                   <button
-                    key={sym.id}
-                    className="symptom-quick-chip"
+                    className="m3-btn-tonal"
+                    onClick={() => {
+                      setActiveTab("seguimiento");
+                      setTrackingSubView("injection");
+                    }}
+                  >
+                    <Syringe size={16} /> Registrar Dosis
+                  </button>
+                  <button
+                    className="m3-btn-outlined"
                     onClick={() => {
                       setActiveTab("seguimiento");
                       setTrackingSubView("symptoms");
-                      setSelectedSymptomId(sym.id);
                     }}
                   >
-                    <span>{sym.icon}</span>
-                    <span>{sym.name.split(" ")[0]}</span>
+                    <HeartPulse size={16} /> Registrar Síntoma
                   </button>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+                </div>
+              </section>
 
-        {/* ========================================================================= */}
-        {/* TAB 2: ENTRENAR (GYMMANE WORKOUT + BODYMAP + 115 EXERCISES) */}
-        {/* ========================================================================= */}
-        {activeTab === "entrenar" && (
-          <section className="tab-section tab-fade-in">
-            {/* View Selector Tabs */}
-            <div className="subview-nav-bar">
-              <button
-                className={`subview-nav-btn ${trainSubView === "library" ? "active" : ""}`}
-                onClick={() => setTrainSubView("library")}
-              >
-                <Dumbbell size={16} /> Biblioteca & Mapa Corporal
-              </button>
-              <button
-                className={`subview-nav-btn ${trainSubView === "live" ? "active" : ""}`}
-                onClick={() => setTrainSubView("live")}
-              >
-                <Activity size={16} /> Sesión en Vivo {liveWorkout ? "(1 activa)" : ""}
-              </button>
-            </div>
+              {/* Nutrition & Protein Target Card */}
+              <section className="m3-card">
+                <div className="card-header-bar">
+                  <h3 className="card-header-title">Nutrición y Preservación Muscular</h3>
+                  <button
+                    className="card-action-text"
+                    onClick={() => setActiveTab("nutricion")}
+                  >
+                    Ver Detalle &rarr;
+                  </button>
+                </div>
 
-            {/* SUBVIEW A: LIVE WORKOUT */}
-            {trainSubView === "live" && (
-              <div className="live-workout-container">
-                {!liveWorkout ? (
-                  <div className="empty-live-box">
-                    <Dumbbell size={48} color="#FF6B35" />
-                    <h3>No hay un entrenamiento activo</h3>
-                    <p>Elige una rutina de los programas o selecciona ejercicios de la biblioteca para comenzar.</p>
-                    <button
-                      className="cta-primary-btn"
-                      onClick={() => {
-                        const defaultProg = GLP1_ROUTINES[0];
-                        startWorkoutFromRoutine(defaultProg, 0);
-                      }}
-                    >
-                      <Play size={16} fill="currentColor" /> Iniciar Rutina Recomendada GLP-1
-                    </button>
+                <div className="macro-telemetry-container">
+                  {/* Protein - Critical Target */}
+                  <div className="m3-progress-row">
+                    <div className="progress-label-line">
+                      <span className="progress-title-text hero-protein">Proteína Diaria</span>
+                      <span className="progress-value-text num-tabular">
+                        {overview.totals.protein} g <span className="dim">/ {overview.proteinGoal} g</span> ({overview.proteinPct}%)
+                      </span>
+                    </div>
+                    <div className="m3-linear-track">
+                      <div
+                        className="m3-linear-fill tertiary"
+                        style={{ width: `${overview.proteinPct}%` }}
+                      ></div>
+                    </div>
                   </div>
-                ) : (
-                  <div>
-                    {/* Live Workout Header */}
-                    <div className="live-header-card">
-                      <div className="live-header-top">
+
+                  {/* Calories */}
+                  <div className="m3-progress-row">
+                    <div className="progress-label-line">
+                      <span className="progress-title-text">Calorías Totales</span>
+                      <span className="progress-value-text num-tabular">
+                        {overview.totals.kcal} <span className="dim">/ {overview.caloriesGoal} kcal</span> ({overview.caloriesPct}%)
+                      </span>
+                    </div>
+                    <div className="m3-linear-track">
+                      <div
+                        className="m3-linear-fill primary"
+                        style={{ width: `${Math.min(100, overview.caloriesPct)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Secondary Macro Grid */}
+                  <div className="macro-secondary-grid">
+                    <div className="macro-mini-kpi">
+                      <span className="kpi-title">Carbohidratos</span>
+                      <span className="kpi-value num-tabular">{overview.totals.carbs} g</span>
+                    </div>
+                    <div className="macro-mini-kpi">
+                      <span className="kpi-title">Grasas</span>
+                      <span className="kpi-value num-tabular">{overview.totals.fat} g</span>
+                    </div>
+                    <div className="macro-mini-kpi">
+                      <span className="kpi-title">Fibra Soluble</span>
+                      <span className="kpi-value num-tabular">{overview.totals.fiber} g</span>
+                    </div>
+                  </div>
+
+                  {/* Hydration Bar */}
+                  <div className="m3-hydration-bar">
+                    <div className="hydration-summary-col">
+                      <span className="hydration-title-val num-tabular">
+                        {overview.waterGlasses} de {overview.waterGoal} vasos ({overview.waterGlasses * 250} ml)
+                      </span>
+                      <span className="hydration-subtext">Meta de reposición hídrica</span>
+                    </div>
+                    <div className="hydration-actions-col">
+                      <button className="m3-btn-outlined" style={{ padding: "6px 14px", fontSize: "0.78rem" }} onClick={addWaterGlass}>
+                        <Plus size={14} /> +250 ml
+                      </button>
+                      <label className="electrolytes-switch">
+                        <input
+                          type="checkbox"
+                          checked={state.nutritionByDate?.[currentDate]?.electrolytes || false}
+                          onChange={toggleElectrolytes}
+                        />
+                        <span>Electrolitos</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Workout Routine Scheduled for Today */}
+              <section className="m3-card">
+                <div className="card-header-bar">
+                  <h3 className="card-header-title">Sesión Programada</h3>
+                  <span className="treatment-active-pill">
+                    {overview.weeklyWorkoutsCount} completados esta semana
+                  </span>
+                </div>
+
+                {(() => {
+                  const activeProg =
+                    GLP1_ROUTINES.find((r) => r.id === profile.activeProgramId) || GLP1_ROUTINES[0];
+                  const dayOne = activeProg.days[0];
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
-                          <span className="live-status-pill">
-                            <span className="recording-dot"></span> EN VIVO
+                          <h4 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--md-sys-color-on-surface)" }}>
+                            {activeProg.name}
+                          </h4>
+                          <span style={{ fontSize: "0.8rem", color: "var(--md-sys-color-primary)", fontWeight: 600 }}>
+                            {dayOne.dayName}
                           </span>
-                          <h2 className="live-routine-title">{liveWorkout.routineName}</h2>
-                          <p className="live-day-title">{liveWorkout.dayName}</p>
                         </div>
-                        <div className="live-clock-box">
-                          <Timer size={18} color="#FF6B35" />
-                          <span className="live-timer-digits">
+                        <span style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 600 }}>
+                          {activeProg.durationMin} min
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {dayOne.exercises.slice(0, 4).map((exItem) => {
+                          const exData = getExerciseById(exItem.id);
+                          return (
+                            <span key={exItem.id} className="ex-tag-item">
+                              {exData?.name || "Ejercicio"}
+                            </span>
+                          );
+                        })}
+                        {dayOne.exercises.length > 4 && (
+                          <span className="ex-tag-item" style={{ color: "var(--md-sys-color-primary)" }}>
+                            +{dayOne.exercises.length - 4} más
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        className="m3-btn-filled"
+                        onClick={() => startWorkoutFromRoutine(activeProg, 0)}
+                      >
+                        <Play size={16} fill="currentColor" /> Iniciar Entrenamiento
+                      </button>
+                    </div>
+                  );
+                })()}
+              </section>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 2: ENTRENAR (GYMMANE WORKOUT + BODYMAP + 115 EXERCISES) */}
+          {/* ========================================================================= */}
+          {activeTab === "entrenar" && (
+            <div className="tab-pane-view">
+              {/* M3 Segmented Buttons */}
+              <div className="m3-segmented-button-row">
+                <button
+                  className={`m3-segment-item ${trainSubView === "library" ? "active" : ""}`}
+                  onClick={() => setTrainSubView("library")}
+                >
+                  <Dumbbell size={16} /> Catálogo & Anatomía
+                </button>
+                <button
+                  className={`m3-segment-item ${trainSubView === "live" ? "active" : ""}`}
+                  onClick={() => setTrainSubView("live")}
+                >
+                  <Activity size={16} /> Sesión en Vivo {liveWorkout ? "(Activa)" : ""}
+                </button>
+              </div>
+
+              {/* LIVE SESSION */}
+              {trainSubView === "live" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {!liveWorkout ? (
+                    <div className="m3-card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <Dumbbell size={40} color="var(--md-sys-color-primary)" style={{ margin: "0 auto 12px auto" }} />
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "6px" }}>
+                        Sin sesión activa
+                      </h3>
+                      <p style={{ fontSize: "0.85rem", color: "var(--md-sys-color-on-surface-variant)", marginBottom: "20px" }}>
+                        Selecciona un programa para comenzar a registrar series, peso y repeticiones.
+                      </p>
+                      <button
+                        className="m3-btn-filled"
+                        style={{ alignSelf: "center" }}
+                        onClick={() => startWorkoutFromRoutine(GLP1_ROUTINES[0], 0)}
+                      >
+                        <Play size={16} fill="currentColor" /> Comenzar Rutina GLP-1
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="live-workout-header-card">
+                        <div>
+                          <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--md-sys-color-primary)", letterSpacing: "0.08em" }}>
+                            REGISTRO EN VIVO
+                          </span>
+                          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--md-sys-color-on-surface)" }}>
+                            {liveWorkout.routineName}
+                          </h3>
+                          <span style={{ fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                            {liveWorkout.dayName}
+                          </span>
+                        </div>
+                        <div className="workout-duration-pill num-tabular">
+                          <Timer size={18} />
+                          <span>
                             {Math.floor(liveSeconds / 60)}:{(liveSeconds % 60).toString().padStart(2, "0")}
                           </span>
                         </div>
                       </div>
 
-                      <div className="live-header-actions">
-                        <button className="finish-workout-btn" onClick={finishLiveWorkout}>
-                          <CheckCircle2 size={16} /> Finalizar Entrenamiento
+                      {/* Exercises in Session */}
+                      {liveWorkout.exercises.map((exItem, exIdx) => (
+                        <div key={exItem.id} className="m3-table-card">
+                          <div className="table-ex-header">
+                            <div className="table-ex-thumb">
+                              <ExerciseArt slug={exItem.catalog.art} height={58} live={true} />
+                            </div>
+                            <div className="table-ex-info">
+                              <h4 className="table-ex-name">{exItem.catalog.name}</h4>
+                              <div className="table-ex-tags">
+                                <span className="ex-tag-item">
+                                  {MUSCLE_LABELS[exItem.catalog.primary]?.name || exItem.catalog.primary}
+                                </span>
+                                <span className="ex-tag-item">{exItem.catalog.equipment}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <table className="m3-sets-table">
+                            <thead>
+                              <tr>
+                                <th>SET</th>
+                                <th>PESO ({unitLabel.toUpperCase()})</th>
+                                <th>REPS</th>
+                                <th>RPE</th>
+                                <th>LISTO</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {exItem.sets.map((setObj, sIdx) => (
+                                <tr key={sIdx} style={{ backgroundColor: setObj.completed ? "rgba(255, 138, 101, 0.08)" : "transparent" }}>
+                                  <td className="set-index-cell">{setObj.setNumber}</td>
+                                  <td>
+                                    <input
+                                      type="number"
+                                      placeholder="0"
+                                      className="set-input-box num-tabular"
+                                      value={setObj.weight}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const updated = [...liveWorkout.exercises];
+                                        updated[exIdx].sets[sIdx].weight = val;
+                                        setLiveWorkout({ ...liveWorkout, exercises: updated });
+                                      }}
+                                    />
+                                  </td>
+                                  <td>
+                                    <input
+                                      type="number"
+                                      placeholder="10"
+                                      className="set-input-box num-tabular"
+                                      value={setObj.reps}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const updated = [...liveWorkout.exercises];
+                                        updated[exIdx].sets[sIdx].reps = val;
+                                        setLiveWorkout({ ...liveWorkout, exercises: updated });
+                                      }}
+                                    />
+                                  </td>
+                                  <td>
+                                    <select
+                                      className="set-input-box num-tabular"
+                                      style={{ width: "58px", padding: "8px 4px" }}
+                                      value={setObj.rpe}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        const updated = [...liveWorkout.exercises];
+                                        updated[exIdx].sets[sIdx].rpe = val;
+                                        setLiveWorkout({ ...liveWorkout, exercises: updated });
+                                      }}
+                                    >
+                                      {[6, 7, 8, 9, 10].map((num) => (
+                                        <option key={num} value={num}>
+                                          {num}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className={`set-complete-btn ${setObj.completed ? "checked" : ""}`}
+                                      onClick={() => toggleSetComplete(exIdx, sIdx)}
+                                    >
+                                      <Check size={18} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+
+                          <button
+                            className="add-set-link"
+                            onClick={() => {
+                              const updated = [...liveWorkout.exercises];
+                              const curSets = updated[exIdx].sets;
+                              const lastSet = curSets[curSets.length - 1] || { weight: "", reps: 10, rpe: 8 };
+                              curSets.push({
+                                setNumber: curSets.length + 1,
+                                weight: lastSet.weight,
+                                reps: lastSet.reps,
+                                rpe: lastSet.rpe,
+                                completed: false,
+                              });
+                              setLiveWorkout({ ...liveWorkout, exercises: updated });
+                            }}
+                          >
+                            + Agregar Serie
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        className="m3-btn-tertiary"
+                        style={{ width: "100%", padding: "14px", marginTop: "8px" }}
+                        onClick={finishLiveWorkout}
+                      >
+                        <CheckCircle2 size={18} /> Finalizar Sesión y Guardar
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* LIBRARY & BODYMAP */}
+              {trainSubView === "library" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Search and Filters */}
+                  <div className="m3-card" style={{ padding: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                      <Search size={18} color="var(--md-sys-color-outline)" />
+                      <input
+                        type="text"
+                        placeholder="Buscar entre los 115 ejercicios de GymMane…"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ flex: 1, border: "none", backgroundColor: "transparent", padding: 0 }}
+                      />
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery("")}>
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="m3-chips-flow">
+                      <button
+                        className={`m3-chip ${selectedEquipment === "all" ? "active" : ""}`}
+                        onClick={() => setSelectedEquipment("all")}
+                      >
+                        Todo el equipamiento
+                      </button>
+                      {Object.entries(EQUIPMENT_LABELS).map(([k, label]) => (
+                        <button
+                          key={k}
+                          className={`m3-chip ${selectedEquipment === k ? "active" : ""}`}
+                          onClick={() => setSelectedEquipment(k)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Interactive BodyMap */}
+                  <div className="bodymap-surface-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <h3 className="card-header-title">Filtro Muscular Anatómico</h3>
+                        <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)" }}>
+                          Toca para ver ejercicios del grupo muscular
+                        </span>
+                      </div>
+
+                      <div className="m3-segmented-button-row" style={{ width: "180px" }}>
+                        <button
+                          className={`m3-segment-item ${anatomySex === "female" ? "active" : ""}`}
+                          onClick={() => setAnatomySex("female")}
+                        >
+                          Femenino
+                        </button>
+                        <button
+                          className={`m3-segment-item ${anatomySex === "male" ? "active" : ""}`}
+                          onClick={() => setAnatomySex("male")}
+                        >
+                          Masculino
                         </button>
                       </div>
                     </div>
 
-                    {/* Exercises In Live Session */}
-                    <div className="live-exercises-list">
-                      {liveWorkout.exercises.map((exItem, exIdx) => {
-                        return (
-                          <div key={exItem.id} className="live-exercise-card">
-                            <div className="live-ex-header">
-                              <div className="live-ex-art-thumb">
-                                <ExerciseArt slug={exItem.catalog.art} height={70} live={true} />
-                              </div>
-                              <div className="live-ex-info">
-                                <h3 className="live-ex-name">{exItem.catalog.name}</h3>
-                                <div className="live-ex-badges">
-                                  <span className="badge-pill orange">
-                                    {MUSCLE_LABELS[exItem.catalog.primary]?.name || exItem.catalog.primary}
-                                  </span>
-                                  <span className="badge-pill neutral">{exItem.catalog.equipment}</span>
-                                </div>
-                                {exItem.note && <p className="live-ex-note">💡 {exItem.note}</p>}
-                              </div>
-                            </div>
-
-                            {/* Sets Table */}
-                            <div className="sets-table-wrapper">
-                              <table className="sets-table">
-                                <thead>
-                                  <tr>
-                                    <th>SERIE</th>
-                                    <th>PESO ({unitLabel.toUpperCase()})</th>
-                                    <th>REPS</th>
-                                    <th>RPE</th>
-                                    <th>✓</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {exItem.sets.map((setObj, sIdx) => (
-                                    <tr key={sIdx} className={setObj.completed ? "set-row-completed" : ""}>
-                                      <td className="set-num-cell">{setObj.setNumber}</td>
-                                      <td>
-                                        <input
-                                          type="number"
-                                          placeholder="0"
-                                          className="set-input weight"
-                                          value={setObj.weight}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            const updated = [...liveWorkout.exercises];
-                                            updated[exIdx].sets[sIdx].weight = val;
-                                            setLiveWorkout({ ...liveWorkout, exercises: updated });
-                                          }}
-                                        />
-                                      </td>
-                                      <td>
-                                        <input
-                                          type="number"
-                                          placeholder="10"
-                                          className="set-input reps"
-                                          value={setObj.reps}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            const updated = [...liveWorkout.exercises];
-                                            updated[exIdx].sets[sIdx].reps = val;
-                                            setLiveWorkout({ ...liveWorkout, exercises: updated });
-                                          }}
-                                        />
-                                      </td>
-                                      <td>
-                                        <select
-                                          className="set-select rpe"
-                                          value={setObj.rpe}
-                                          onChange={(e) => {
-                                            const val = Number(e.target.value);
-                                            const updated = [...liveWorkout.exercises];
-                                            updated[exIdx].sets[sIdx].rpe = val;
-                                            setLiveWorkout({ ...liveWorkout, exercises: updated });
-                                          }}
-                                        >
-                                          {[6, 7, 8, 9, 10].map((num) => (
-                                            <option key={num} value={num}>
-                                              {num}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </td>
-                                      <td>
-                                        <button
-                                          className={`set-check-btn ${setObj.completed ? "checked" : ""}`}
-                                          onClick={() => toggleSetComplete(exIdx, sIdx)}
-                                        >
-                                          <Check size={16} />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-
-                              <div className="add-set-row">
-                                <button
-                                  className="add-set-btn"
-                                  onClick={() => {
-                                    const updated = [...liveWorkout.exercises];
-                                    const curSets = updated[exIdx].sets;
-                                    const lastSet = curSets[curSets.length - 1] || { weight: "", reps: 10, rpe: 8 };
-                                    curSets.push({
-                                      setNumber: curSets.length + 1,
-                                      weight: lastSet.weight,
-                                      reps: lastSet.reps,
-                                      rpe: lastSet.rpe,
-                                      completed: false,
-                                    });
-                                    setLiveWorkout({ ...liveWorkout, exercises: updated });
-                                  }}
-                                >
-                                  <Plus size={14} /> Agregar Serie
-                                </button>
-                              </div>
-                            </div>
-                          </div>
+                    <BodyMap
+                      sex={anatomySex}
+                      selectedMuscles={selectedMuscles}
+                      onToggleMuscle={(mId) => {
+                        setSelectedMuscles((prev) =>
+                          prev.includes(mId) ? prev.filter((id) => id !== mId) : [...prev, mId]
                         );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SUBVIEW B: LIBRARY & BODYMAP */}
-            {trainSubView === "library" && (
-              <div className="exercise-library-container">
-                {/* Search & Filter Bar */}
-                <div className="search-filter-card">
-                  <div className="search-input-wrap">
-                    <Search size={18} color="#9CA3AF" />
-                    <input
-                      type="text"
-                      placeholder="Buscar ejercicio por nombre en español o inglés…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="search-input"
+                      }}
+                      highlightPriority={true}
                     />
-                    {searchQuery && (
-                      <button className="clear-search-btn" onClick={() => setSearchQuery("")}>
-                        <X size={16} />
-                      </button>
+
+                    {selectedMuscles.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)" }}>Seleccionados:</span>
+                        {selectedMuscles.map((mId) => (
+                          <span key={mId} className="ex-tag-item" style={{ color: "var(--md-sys-color-primary)" }}>
+                            {MUSCLE_LABELS[mId]?.name || mId}
+                            <X
+                              size={12}
+                              style={{ cursor: "pointer", marginLeft: "4px" }}
+                              onClick={() => setSelectedMuscles((prev) => prev.filter((id) => id !== mId))}
+                            />
+                          </span>
+                        ))}
+                        <button
+                          style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", textDecoration: "underline" }}
+                          onClick={() => setSelectedMuscles([])}
+                        >
+                          Restablecer
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Equipment Pills */}
-                  <div className="equipment-chips-row">
-                    <button
-                      className={`equipment-chip ${selectedEquipment === "all" ? "active" : ""}`}
-                      onClick={() => setSelectedEquipment("all")}
-                    >
-                      Todos los equipos
-                    </button>
-                    {Object.entries(EQUIPMENT_LABELS).map(([k, label]) => (
-                      <button
-                        key={k}
-                        className={`equipment-chip ${selectedEquipment === k ? "active" : ""}`}
-                        onClick={() => setSelectedEquipment(k)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Interactive BodyMap */}
-                <div className="bodymap-container-card">
-                  <div className="bodymap-header-row">
-                    <div>
-                      <h3 className="section-title">Mapa Muscular Anatómico</h3>
-                      <p className="section-subtitle">Toca un músculo para filtrar los 115 ejercicios.</p>
-                    </div>
-
-                    <div className="sex-toggle-group">
-                      <button
-                        className={`sex-toggle-btn ${anatomySex === "female" ? "active" : ""}`}
-                        onClick={() => setAnatomySex("female")}
-                      >
-                        Femenino
-                      </button>
-                      <button
-                        className={`sex-toggle-btn ${anatomySex === "male" ? "active" : ""}`}
-                        onClick={() => setAnatomySex("male")}
-                      >
-                        Masculino
-                      </button>
-                    </div>
+                  {/* Exercise Tiles */}
+                  <div style={{ fontSize: "0.8rem", color: "var(--md-sys-color-outline)" }}>
+                    {filteredExercises.length} ejercicios disponibles
                   </div>
 
-                  <BodyMap
-                    sex={anatomySex}
-                    selectedMuscles={selectedMuscles}
-                    onToggleMuscle={(mId) => {
-                      setSelectedMuscles((prev) =>
-                        prev.includes(mId) ? prev.filter((id) => id !== mId) : [...prev, mId]
-                      );
-                    }}
-                    highlightPriority={true}
-                  />
-
-                  {selectedMuscles.length > 0 && (
-                    <div className="active-muscles-chips">
-                      <span>Músculos seleccionados:</span>
-                      {selectedMuscles.map((mId) => (
-                        <span key={mId} className="active-muscle-chip">
-                          {MUSCLE_LABELS[mId]?.name || mId}
-                          <X
-                            size={12}
-                            onClick={() => setSelectedMuscles((prev) => prev.filter((id) => id !== mId))}
-                          />
-                        </span>
-                      ))}
-                      <button className="clear-all-muscles" onClick={() => setSelectedMuscles([])}>
-                        Limpiar filtro
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Exercise Cards Grid */}
-                <div className="exercises-results-header">
-                  <span>
-                    Mostrando <strong>{filteredExercises.length}</strong> de 115 ejercicios
-                  </span>
-                </div>
-
-                <div className="exercise-cards-grid">
-                  {filteredExercises.slice(0, 30).map((exercise) => {
-                    return (
+                  <div className="m3-exercise-grid">
+                    {filteredExercises.slice(0, 36).map((exercise) => (
                       <div
                         key={exercise.id}
-                        className="exercise-card"
+                        className="m3-exercise-tile"
                         onClick={() => setActiveExerciseModal(exercise)}
                       >
-                        <div className="exercise-card-art">
-                          <ExerciseArt slug={exercise.art} height={120} live={false} />
+                        <div className="tile-art-stage">
+                          <ExerciseArt slug={exercise.art} height={110} live={false} />
                         </div>
-                        <div className="exercise-card-body">
-                          <h4 className="ex-title">{exercise.name}</h4>
-                          <span className="ex-name-en">{exercise.nameEn}</span>
-                          <div className="ex-tags-row">
-                            <span className="ex-badge primary">
+                        <div className="tile-content-pad">
+                          <h4 className="tile-name">{exercise.name}</h4>
+                          <span className="tile-sub">{exercise.nameEn}</span>
+                          <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                            <span className="ex-tag-item" style={{ color: "var(--md-sys-color-primary)" }}>
                               {MUSCLE_LABELS[exercise.primary]?.name || exercise.primary}
                             </span>
-                            <span className="ex-badge eq">{exercise.equipment}</span>
+                            <span className="ex-tag-item">{exercise.equipment}</span>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Exercise Detail Modal */}
-            {activeExerciseModal && (
-              <div className="modal-overlay" onClick={() => setActiveExerciseModal(null)}>
-                <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-                  <div className="modal-header">
-                    <div>
-                      <h3 className="modal-title">{activeExerciseModal.name}</h3>
-                      <p className="modal-subtitle">{activeExerciseModal.nameEn}</p>
-                    </div>
-                    <button className="modal-close-btn" onClick={() => setActiveExerciseModal(null)}>
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="modal-art-stage">
-                    <ExerciseArt slug={activeExerciseModal.art} height={220} live={true} />
-                  </div>
-
-                  <div className="modal-body-content">
-                    <div className="modal-meta-grid">
-                      <div className="meta-box">
-                        <span className="meta-label">MÚSCULO PRINCIPAL</span>
-                        <span className="meta-val orange">
-                          {MUSCLE_LABELS[activeExerciseModal.primary]?.name || activeExerciseModal.primary}
+              {/* M3 Modal Sheet for Exercise Details */}
+              {activeExerciseModal && (
+                <div className="m3-modal-scrim" onClick={() => setActiveExerciseModal(null)}>
+                  <div className="m3-modal-sheet" onClick={(e) => e.stopPropagation()}>
+                    <div className="m3-drag-handle-bar"></div>
+                    <div className="m3-modal-top">
+                      <div>
+                        <h3 className="m3-modal-title">{activeExerciseModal.name}</h3>
+                        <span style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)" }}>
+                          {activeExerciseModal.nameEn}
                         </span>
                       </div>
-                      <div className="meta-box">
-                        <span className="meta-label">EQUIPAMIENTO</span>
-                        <span className="meta-val">{activeExerciseModal.equipment}</span>
-                      </div>
-                      <div className="meta-box">
-                        <span className="meta-label">DIFICULTAD</span>
-                        <span className="meta-val">
-                          {DIFFICULTY_LABELS[activeExerciseModal.difficulty] || activeExerciseModal.difficulty}
-                        </span>
-                      </div>
+                      <button className="m3-icon-button" onClick={() => setActiveExerciseModal(null)}>
+                        <X size={20} />
+                      </button>
                     </div>
 
-                    <div className="modal-steps-section">
-                      <h4 className="steps-title">Instrucciones Paso a Paso:</h4>
-                      <ol className="steps-list">
-                        {activeExerciseModal.steps.map((st, i) => (
-                          <li key={i}>{st}</li>
-                        ))}
-                      </ol>
+                    <div style={{ background: "#F8FAFC", padding: "16px", display: "flex", justifyContent: "center" }}>
+                      <ExerciseArt slug={activeExerciseModal.art} height={200} live={true} />
                     </div>
 
-                    <div className="modal-actions-footer">
+                    <div className="m3-modal-body">
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                        <div className="m3-card" style={{ padding: "8px", textAlign: "center" }}>
+                          <span style={{ fontSize: "0.62rem", color: "var(--md-sys-color-outline)", textTransform: "uppercase" }}>Músculo</span>
+                          <strong style={{ fontSize: "0.78rem", color: "var(--md-sys-color-primary)" }}>
+                            {MUSCLE_LABELS[activeExerciseModal.primary]?.name || activeExerciseModal.primary}
+                          </strong>
+                        </div>
+                        <div className="m3-card" style={{ padding: "8px", textAlign: "center" }}>
+                          <span style={{ fontSize: "0.62rem", color: "var(--md-sys-color-outline)", textTransform: "uppercase" }}>Equipo</span>
+                          <strong style={{ fontSize: "0.78rem" }}>{activeExerciseModal.equipment}</strong>
+                        </div>
+                        <div className="m3-card" style={{ padding: "8px", textAlign: "center" }}>
+                          <span style={{ fontSize: "0.62rem", color: "var(--md-sys-color-outline)", textTransform: "uppercase" }}>Nivel</span>
+                          <strong style={{ fontSize: "0.78rem" }}>{DIFFICULTY_LABELS[activeExerciseModal.difficulty] || activeExerciseModal.difficulty}</strong>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 style={{ fontSize: "0.9rem", fontWeight: 700, marginBottom: "8px" }}>Técnica de Ejecución:</h4>
+                        <ol style={{ paddingLeft: "18px", fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)", lineHeight: 1.45, display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {activeExerciseModal.steps.map((st, i) => (
+                            <li key={i}>{st}</li>
+                          ))}
+                        </ol>
+                      </div>
+
                       <button
-                        className="modal-action-btn primary"
+                        className="m3-btn-filled"
                         onClick={() => {
                           const quickRoutine = {
                             id: `quick-${activeExerciseModal.id}`,
@@ -1378,253 +1290,254 @@ export default function GymManeApp() {
                           setActiveExerciseModal(null);
                         }}
                       >
-                        <Play size={16} fill="currentColor" /> Entrenar Este Ejercicio Ahora
+                        <Play size={16} fill="currentColor" /> Iniciar Sesión con este Ejercicio
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 3: PROGRAMAS (12 RUTINAS: 8 GYMMANE + 4 GLP-1 + CREADOR) */}
-        {/* ========================================================================= */}
-        {activeTab === "programas" && (
-          <section className="tab-section tab-fade-in">
-            {/* Filter Chips */}
-            <div className="filter-chips-bar">
-              <button
-                className={`filter-chip ${programFilter === "all" ? "active" : ""}`}
-                onClick={() => setProgramFilter("all")}
-              >
-                Todos (12)
-              </button>
-              <button
-                className={`filter-chip ${programFilter === "glp1" ? "active" : ""}`}
-                onClick={() => setProgramFilter("glp1")}
-              >
-                Especiales GLP-1 (4)
-              </button>
-              <button
-                className={`filter-chip ${programFilter === "classic" ? "active" : ""}`}
-                onClick={() => setProgramFilter("classic")}
-              >
-                Clásicos GymMane (8)
-              </button>
-              <button
-                className={`filter-chip ${programFilter === "custom" ? "active" : ""}`}
-                onClick={() => setProgramFilter("custom")}
-              >
-                Mis Rutinas ({state.customRoutines?.length || 0})
-              </button>
+              )}
             </div>
+          )}
 
-            {/* Routines Grid */}
-            <div className="programs-grid">
-              {allRoutines
-                .filter((r) => {
+          {/* ========================================================================= */}
+          {/* TAB 3: PROGRAMAS (12 PROGRAMAS M3) */}
+          {/* ========================================================================= */}
+          {activeTab === "programas" && (
+            <div className="tab-pane-view">
+              {/* Segmented Filter */}
+              <div className="m3-segmented-button-row">
+                <button
+                  className={`m3-segment-item ${programFilter === "all" ? "active" : ""}`}
+                  onClick={() => setProgramFilter("all")}
+                >
+                  Todos (12)
+                </button>
+                <button
+                  className={`m3-segment-item ${programFilter === "glp1" ? "active" : ""}`}
+                  onClick={() => setProgramFilter("glp1")}
+                >
+                  Especiales GLP-1 (4)
+                </button>
+                <button
+                  className={`m3-segment-item ${programFilter === "classic" ? "active" : ""}`}
+                  onClick={() => setProgramFilter("classic")}
+                >
+                  Clásicos GymMane (8)
+                </button>
+              </div>
+
+              {/* Program Cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {GLP1_ROUTINES.filter((r) => {
                   if (programFilter === "glp1") return r.category === "glp1";
                   if (programFilter === "classic") return r.category === "classic";
-                  if (programFilter === "custom") return r.isCustom === true;
                   return true;
-                })
-                .map((routine) => {
+                }).map((routine) => {
                   const isCurrentActive = profile.activeProgramId === routine.id;
                   return (
-                    <div key={routine.id} className={`program-card ${isCurrentActive ? "is-active-program" : ""}`}>
-                      <div className="program-card-header">
+                    <div key={routine.id} className={`program-block-card ${isCurrentActive ? "active-program" : ""}`}>
+                      <div className="program-block-top">
                         <div>
-                          <div className="program-badge-row">
-                            <span className={`program-cat-badge ${routine.category === "glp1" ? "emerald" : "orange"}`}>
+                          <div className="program-badge-line">
+                            <span className={`program-tag ${routine.category === "glp1" ? "emerald" : ""}`}>
                               {routine.badge}
                             </span>
-                            {isCurrentActive && <span className="active-label">PROGRAMA ACTIVO</span>}
+                            {isCurrentActive && (
+                              <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--md-sys-color-primary)" }}>
+                                PROGRAMA ACTIVO
+                              </span>
+                            )}
                           </div>
-                          <h3 className="program-title">{routine.name}</h3>
-                          <p className="program-focus">{routine.focus}</p>
+                          <h3 className="program-block-name" style={{ marginTop: "4px" }}>
+                            {routine.name}
+                          </h3>
                         </div>
-                        <div className="program-duration-box">
-                          <Clock size={14} />
-                          <span>{routine.durationMin} min</span>
-                        </div>
+                        <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)", fontWeight: 600 }}>
+                          {routine.durationMin} min
+                        </span>
                       </div>
 
+                      <p className="program-desc-text">{routine.focus}</p>
+
                       {routine.glp1Tip && (
-                        <div className="program-glp1-tip">
-                          <strong>Consejo Clínico:</strong> {routine.glp1Tip}
+                        <div className="program-glp1-callout">
+                          <strong>Indicación Clínica:</strong> {routine.glp1Tip}
                         </div>
                       )}
 
-                      {/* Days preview */}
-                      <div className="program-days-accordion">
+                      <div className="program-days-strip">
                         {routine.days.map((d, dIdx) => (
-                          <div key={dIdx} className="program-day-item">
-                            <div className="day-item-header">
-                              <span className="day-name">{d.dayName}</span>
-                              <span className="day-ex-count">{d.exercises.length} ejercicios</span>
+                          <div key={dIdx} className="program-day-row">
+                            <div>
+                              <span className="day-row-title">{d.dayName}</span>
+                              <span className="day-row-count">({d.exercises.length} ejercicios)</span>
                             </div>
-                            <div className="day-actions">
-                              <button
-                                className="start-day-btn"
-                                onClick={() => startWorkoutFromRoutine(routine, dIdx)}
-                              >
-                                <Play size={14} fill="currentColor" /> Iniciar Día
-                              </button>
-                            </div>
+                            <button
+                              className="btn-start-day"
+                              onClick={() => startWorkoutFromRoutine(routine, dIdx)}
+                            >
+                              <Play size={12} fill="currentColor" /> Iniciar
+                            </button>
                           </div>
                         ))}
                       </div>
 
-                      <div className="program-card-footer">
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
                         <button
-                          className="set-active-program-btn"
+                          className="m3-btn-outlined"
+                          style={{ padding: "6px 14px", fontSize: "0.78rem" }}
                           onClick={() => {
                             saveState((prev) => ({
                               ...prev,
                               profile: { ...prev.profile, activeProgramId: routine.id },
                             }));
-                            showToast(`🌟 ${routine.name} fijado como programa principal.`);
+                            showToast(`${routine.name} seleccionado como programa principal`);
                           }}
                         >
-                          {isCurrentActive ? "Programa Principal Fijado" : "Fijar como Mi Programa"}
+                          {isCurrentActive ? "Programa Asignado" : "Asignar a Mi Rutina"}
                         </button>
                       </div>
                     </div>
                   );
                 })}
+              </div>
             </div>
-          </section>
-        )}
+          )}
 
-        {/* ========================================================================= */}
-        {/* TAB 4: NUTRICIÓN (DIARIO + SEMÁFORO GLP-1 + MENÚ POR FASE) */}
-        {/* ========================================================================= */}
-        {activeTab === "nutricion" && (
-          <section className="tab-section tab-fade-in">
-            {/* View Selector */}
-            <div className="subview-nav-bar">
-              <button
-                className={`subview-nav-btn ${nutriSubView === "diary" ? "active" : ""}`}
-                onClick={() => setNutriSubView("diary")}
-              >
-                <Utensils size={16} /> Diario y Macros
-              </button>
-              <button
-                className={`subview-nav-btn ${nutriSubView === "traffic" ? "active" : ""}`}
-                onClick={() => setNutriSubView("traffic")}
-              >
-                <ShieldCheck size={16} /> Semáforo GLP-1
-              </button>
-              <button
-                className={`subview-nav-btn ${nutriSubView === "phase_menu" ? "active" : ""}`}
-                onClick={() => setNutriSubView("phase_menu")}
-              >
-                <Calendar size={16} /> Menú por Fase (7 Días)
-              </button>
-            </div>
+          {/* ========================================================================= */}
+          {/* TAB 4: NUTRICIÓN (DIARIO + SEMÁFORO M3 + MENÚ POR FASE) */}
+          {/* ========================================================================= */}
+          {activeTab === "nutricion" && (
+            <div className="tab-pane-view">
+              {/* Segmented Buttons */}
+              <div className="m3-segmented-button-row">
+                <button
+                  className={`m3-segment-item ${nutriSubView === "diary" ? "active" : ""}`}
+                  onClick={() => setNutriSubView("diary")}
+                >
+                  <Utensils size={16} /> Diario de Macros
+                </button>
+                <button
+                  className={`m3-segment-item ${nutriSubView === "traffic" ? "active" : ""}`}
+                  onClick={() => setNutriSubView("traffic")}
+                >
+                  <ShieldCheck size={16} /> Semáforo de Alimentos
+                </button>
+                <button
+                  className={`m3-segment-item ${nutriSubView === "phase_menu" ? "active" : ""}`}
+                  onClick={() => setNutriSubView("phase_menu")}
+                >
+                  <Calendar size={16} /> Menú por Fase
+                </button>
+              </div>
 
-            {/* SUBVIEW A: DIARIO DE COMIDAS */}
-            {nutriSubView === "diary" && (
-              <div className="nutrition-diary-wrap">
-                {/* Hero Macro Cards */}
-                <div className="diary-macro-summary-card">
-                  <div className="diary-rings-row">
-                    <div className="diary-macro-circle emerald">
-                      <span className="circle-val">{overview.totals.protein}g</span>
-                      <span className="circle-lbl">PROTEÍNA</span>
-                      <span className="circle-sub">Meta: {overview.proteinGoal}g</span>
-                    </div>
-                    <div className="diary-macro-circle orange">
-                      <span className="circle-val">{overview.totals.kcal}</span>
-                      <span className="circle-lbl">CALORÍAS</span>
-                      <span className="circle-sub">Meta: {overview.caloriesGoal}</span>
-                    </div>
-                    <div className="diary-macro-circle cyan">
-                      <span className="circle-val">{overview.totals.carbs}g</span>
-                      <span className="circle-lbl">CARBOS</span>
-                      <span className="circle-sub">Fibra: {overview.totals.fiber}g</span>
+              {/* DIARIO DE COMIDAS */}
+              {nutriSubView === "diary" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Macro Progress Overview */}
+                  <div className="m3-card">
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", textAlign: "center" }}>
+                      <div>
+                        <span className="kpi-title">Proteína</span>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--md-sys-color-tertiary)" }} className="num-tabular">
+                          {overview.totals.protein}g
+                        </div>
+                        <span style={{ fontSize: "0.7rem", color: "var(--md-sys-color-outline)" }}>Meta: {overview.proteinGoal}g</span>
+                      </div>
+                      <div>
+                        <span className="kpi-title">Calorías</span>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--md-sys-color-primary)" }} className="num-tabular">
+                          {overview.totals.kcal}
+                        </div>
+                        <span style={{ fontSize: "0.7rem", color: "var(--md-sys-color-outline)" }}>Meta: {overview.caloriesGoal}</span>
+                      </div>
+                      <div>
+                        <span className="kpi-title">Fibra Soluble</span>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--md-sys-color-on-surface)" }} className="num-tabular">
+                          {overview.totals.fiber}g
+                        </div>
+                        <span style={{ fontSize: "0.7rem", color: "var(--md-sys-color-outline)" }}>Meta: 25g</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Quick Add Custom Food Form */}
-                <div className="add-food-card">
-                  <h4 className="card-subtitle">Registrar Comida Rápida</h4>
-                  <form onSubmit={addCustomMeal} className="add-food-form">
-                    <input
-                      type="text"
-                      placeholder="Ej: Pechuga a la plancha, Avena con chía…"
-                      value={customFoodName}
-                      onChange={(e) => setCustomFoodName(e.target.value)}
-                      className="form-input"
-                      required
-                    />
-                    <div className="form-row-multi">
+                  {/* Add Food Form */}
+                  <div className="m3-card">
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700 }}>Añadir Alimento al Registro</h4>
+                    <form onSubmit={addCustomMeal} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                       <input
-                        type="number"
-                        placeholder="Proteína (g)"
-                        value={customFoodProtein}
-                        onChange={(e) => setCustomFoodProtein(e.target.value)}
-                        className="form-input"
+                        type="text"
+                        placeholder="Descripción (ej. Pechuga de pollo, yogur griego…)"
+                        value={customFoodName}
+                        onChange={(e) => setCustomFoodName(e.target.value)}
+                        required
                       />
-                      <input
-                        type="number"
-                        placeholder="Calorías (kcal)"
-                        value={customFoodKcal}
-                        onChange={(e) => setCustomFoodKcal(e.target.value)}
-                        className="form-input"
-                      />
-                      <select
-                        value={customFoodSlot}
-                        onChange={(e) => setCustomFoodSlot(e.target.value)}
-                        className="form-select"
-                      >
-                        <option value="Desayuno">Desayuno</option>
-                        <option value="Almuerzo">Almuerzo</option>
-                        <option value="Cena">Cena</option>
-                        <option value="Merienda / Snack">Merienda / Snack</option>
-                      </select>
-                    </div>
-                    <button type="submit" className="submit-food-btn">
-                      <Plus size={16} /> Añadir al Diario de Hoy
-                    </button>
-                  </form>
-                </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: "8px" }}>
+                        <input
+                          type="number"
+                          placeholder="Proteína (g)"
+                          value={customFoodProtein}
+                          onChange={(e) => setCustomFoodProtein(e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Kcal"
+                          value={customFoodKcal}
+                          onChange={(e) => setCustomFoodKcal(e.target.value)}
+                        />
+                        <select value={customFoodSlot} onChange={(e) => setCustomFoodSlot(e.target.value)}>
+                          <option value="Desayuno">Desayuno</option>
+                          <option value="Almuerzo">Almuerzo</option>
+                          <option value="Cena">Cena</option>
+                          <option value="Snack">Snack</option>
+                        </select>
+                      </div>
+                      <button type="submit" className="m3-btn-filled" style={{ alignSelf: "flex-end" }}>
+                        <Plus size={16} /> Registrar Alimento
+                      </button>
+                    </form>
+                  </div>
 
-                {/* Logged Meals by Slot */}
-                <div className="logged-meals-section">
-                  {["Desayuno", "Almuerzo", "Cena", "Merienda / Snack"].map((slotName) => {
+                  {/* Meals Logged */}
+                  {["Desayuno", "Almuerzo", "Cena", "Snack"].map((slotName) => {
                     const mealsInSlot = (state.nutritionByDate?.[currentDate]?.meals || []).filter(
                       (m) => m.slot === slotName
                     );
-                    const slotProtein = mealsInSlot.reduce((sum, m) => sum + (Number(m.protein) || 0), 0);
+                    const slotProtein = mealsInSlot.reduce((s, m) => s + (Number(m.protein) || 0), 0);
                     return (
-                      <div key={slotName} className="slot-group-card">
-                        <div className="slot-group-header">
-                          <h4 className="slot-title">{slotName}</h4>
-                          <span className="slot-protein-sum">{slotProtein}g proteína</span>
+                      <div key={slotName} className="m3-card" style={{ padding: "14px 16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <h4 style={{ fontSize: "0.9rem", fontWeight: 700 }}>{slotName}</h4>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--md-sys-color-tertiary)" }}>
+                            {slotProtein} g proteína
+                          </span>
                         </div>
 
                         {mealsInSlot.length === 0 ? (
-                          <p className="empty-slot-msg">Sin comidas registradas en este bloque.</p>
+                          <span style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)" }}>
+                            Sin registro en este horario
+                          </span>
                         ) : (
-                          <div className="meals-in-slot-list">
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
                             {mealsInSlot.map((meal) => (
-                              <div key={meal.id} className="meal-log-item">
-                                <div className="meal-item-info">
-                                  <span className="meal-name">{meal.name}</span>
-                                  <div className="meal-macros-chips">
-                                    <span className="macro-tag green">{meal.protein}g proteína</span>
-                                    <span className="macro-tag neutral">{meal.kcal} kcal</span>
+                              <div
+                                key={meal.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  padding: "8px 10px",
+                                  backgroundColor: "var(--md-sys-color-surface-container-high)",
+                                  borderRadius: "var(--md-sys-shape-corner-extra-small)",
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{meal.name}</div>
+                                  <div style={{ fontSize: "0.72rem", color: "var(--md-sys-color-tertiary)" }}>
+                                    {meal.protein}g proteína · {meal.kcal} kcal
                                   </div>
                                 </div>
-                                <button
-                                  className="remove-meal-btn"
-                                  onClick={() => removeMeal(meal.id)}
-                                  title="Eliminar"
-                                >
+                                <button onClick={() => removeMeal(meal.id)} style={{ color: "var(--md-sys-color-outline)" }}>
                                   <Trash2 size={16} />
                                 </button>
                               </div>
@@ -1635,131 +1548,135 @@ export default function GymManeApp() {
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* SUBVIEW B: SEMÁFORO DE ALIMENTOS GLP-1 */}
-            {nutriSubView === "traffic" && (
-              <div className="traffic-light-container">
-                <div className="traffic-nav-tabs">
-                  <button
-                    className={`traffic-tab green ${foodFilter === "green" ? "active" : ""}`}
-                    onClick={() => setFoodFilter("green")}
-                  >
-                    🟢 Priorizar Siempre
-                  </button>
-                  <button
-                    className={`traffic-tab yellow ${foodFilter === "yellow" ? "active" : ""}`}
-                    onClick={() => setFoodFilter("yellow")}
-                  >
-                    🟡 Moderar (Porción Medida)
-                  </button>
-                  <button
-                    className={`traffic-tab red ${foodFilter === "red" ? "active" : ""}`}
-                    onClick={() => setFoodFilter("red")}
-                  >
-                    🔴 Evitar Estrictamente
-                  </button>
-                </div>
+              {/* SEMÁFORO DE ALIMENTOS */}
+              {nutriSubView === "traffic" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div className="m3-segmented-button-row">
+                    <button
+                      className={`m3-segment-item ${foodFilter === "green" ? "active" : ""}`}
+                      onClick={() => setFoodFilter("green")}
+                    >
+                      Priorizar
+                    </button>
+                    <button
+                      className={`m3-segment-item ${foodFilter === "yellow" ? "active" : ""}`}
+                      onClick={() => setFoodFilter("yellow")}
+                    >
+                      Moderar
+                    </button>
+                    <button
+                      className={`m3-segment-item ${foodFilter === "red" ? "active" : ""}`}
+                      onClick={() => setFoodFilter("red")}
+                    >
+                      Evitar
+                    </button>
+                  </div>
 
-                <div className="traffic-explanation-banner">
-                  {foodFilter === "green" && (
-                    <p>
-                      🟢 <strong>Alimentos Verdes:</strong> Proteínas magras de digestión rápida y fibra soluble.
-                      Preservan masa muscular sin sobrecargar el estómago ralentizado por Mounjaro u Ozempic.
-                    </p>
-                  )}
-                  {foodFilter === "yellow" && (
-                    <p>
-                      🟡 <strong>Alimentos Amarillos:</strong> Grasas saludables y carbohidratos nobles. Consúmelos en
-                      porciones medidas tras comerte primero tu proteína para evitar saciedad precoz sin nutrición.
-                    </p>
-                  )}
-                  {foodFilter === "red" && (
-                    <p>
-                      🔴 <strong>Alimentos Rojos:</strong> Frituras, grasas saturadas, azúcares densos y bebidas con
-                      gas. El vaciado gástrico lento hace que fermenten, provocando náuseas severas, reflujo o eructos
-                      de azufre.
-                    </p>
-                  )}
-                </div>
+                  <div className="m3-card" style={{ padding: "12px 16px", fontSize: "0.82rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                    {foodFilter === "green" && (
+                      <p>
+                        <strong>Alimentos Recomendados:</strong> Proteínas magras y fibra hidrosoluble. Se digieren sin retrasar el vaciamiento gástrico y protegen el tejido contráctil.
+                      </p>
+                    )}
+                    {foodFilter === "yellow" && (
+                      <p>
+                        <strong>Alimentos a Moderar:</strong> Grasas saludables y carbohidratos complejos. Consumir en porciones medidas tras haber ingerido la proteína base.
+                      </p>
+                    )}
+                    {foodFilter === "red" && (
+                      <p>
+                        <strong>Alimentos No Aconsejados:</strong> Grasas saturadas y bebidas carbonatadas. Permanecen excesivo tiempo en el estómago provocando acidez, náusea o eructos de azufre.
+                      </p>
+                    )}
+                  </div>
 
-                <div className="food-cards-list">
-                  {FOOD_GUIDE.filter((f) => f.category === foodFilter).map((food) => (
-                    <div key={food.id} className={`food-guide-card ${food.category}`}>
-                      <div className="food-guide-top">
-                        <span className="food-icon">{food.icon}</span>
-                        <div className="food-titles">
-                          <h4 className="food-title">{food.name}</h4>
-                          <span className="food-group-pill">{food.group}</span>
-                        </div>
-                        {food.category !== "red" && (
-                          <button
-                            className="add-to-diary-btn"
-                            onClick={() => addFoodFromGuide(food, "Almuerzo")}
-                            title="Añadir a mi almuerzo de hoy"
-                          >
-                            <Plus size={14} /> Añadir
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="food-macros-line">
-                        <span>
-                          Porción: <strong>{food.portion}</strong>
-                        </span>
-                        <span>
-                          Proteína: <strong className="green">{food.protein}g</strong>
-                        </span>
-                        <span>
-                          Calorías: <strong>{food.kcal} kcal</strong>
-                        </span>
-                      </div>
-
-                      <div className="food-clinical-reason">
-                        <strong>¿Por qué con GLP-1?</strong> {food.reason}
-                      </div>
-
-                      <div className="food-best-for">
-                        <span>⏰ Momento ideal: {food.bestFor}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* SUBVIEW C: MENÚ POR FASE DEL CICLO SEMANAL */}
-            {nutriSubView === "phase_menu" && (
-              <div className="phase-menu-container">
-                <div className="phase-menu-intro">
-                  <h3 className="section-title">Estrategia Nutricional en los 7 Días del Ciclo</h3>
-                  <p className="section-subtitle">
-                    Tu apetito y velocidad de digestión cambian día a día con la inyección. Adapta tus comidas según la
-                    fase actual:
-                  </p>
-                </div>
-
-                <div className="phase-plans-list">
-                  {MEAL_PLANS_BY_PHASE.map((phase) => {
-                    const isCurrentPhase = overview.cyclePhase.id === phase.id;
-                    return (
-                      <div key={phase.id} className={`phase-plan-card ${isCurrentPhase ? "current-phase-card" : ""}`}>
-                        <div className="phase-plan-header">
-                          <div className="phase-badge-line">
-                            <span className="phase-badge">{phase.badge}</span>
-                            {isCurrentPhase && <span className="current-phase-indicator">FASE ACTUAL DE HOY</span>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {FOOD_GUIDE.filter((f) => f.category === foodFilter).map((food) => (
+                      <div key={food.id} className="clinical-food-card">
+                        <div className="food-card-top">
+                          <div>
+                            <span className="food-card-title">{food.name}</span>
+                            <span className="food-card-group">({food.group})</span>
                           </div>
-                          <h4 className="phase-title">{phase.title}</h4>
-                          <p className="phase-desc">{phase.description}</p>
+                          {food.category !== "red" && (
+                            <button
+                              className="m3-btn-outlined"
+                              style={{ padding: "4px 10px", fontSize: "0.72rem" }}
+                              onClick={() => addFoodFromGuide(food, "Almuerzo")}
+                            >
+                              + Añadir
+                            </button>
+                          )}
                         </div>
 
-                        <div className="phase-meals-grid">
-                          {phase.meals.map((mealItem, idx) => (
-                            <div key={idx} className="phase-meal-box">
-                              <span className="phase-slot-label">{mealItem.slot}</span>
-                              <p className="phase-meal-idea">{mealItem.idea}</p>
-                              <span className="phase-meal-macros">{mealItem.macros}</span>
+                        <div className="food-macro-strip">
+                          <span>Porción: {food.portion}</span>
+                          <span>Proteína: <strong className="green">{food.protein} g</strong></span>
+                          <span>Kcal: {food.kcal}</span>
+                        </div>
+
+                        <div className="food-reason-text">
+                          {food.reason}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MENÚ POR FASE */}
+              {nutriSubView === "phase_menu" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--md-sys-color-outline)" }}>
+                    Estrategia de comidas adaptada a la curva farmacocinética de 7 días:
+                  </div>
+
+                  {MEAL_PLANS_BY_PHASE.map((phase) => {
+                    const isCurrent = overview.cyclePhase.id === phase.id;
+                    return (
+                      <div
+                        key={phase.id}
+                        className="m3-card"
+                        style={{ borderColor: isCurrent ? "var(--md-sys-color-tertiary)" : "var(--md-sys-color-outline-variant)" }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div>
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                              <span className="program-tag emerald">{phase.badge}</span>
+                              {isCurrent && (
+                                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--md-sys-color-tertiary)" }}>
+                                  FASE DE HOY
+                                </span>
+                              )}
+                            </div>
+                            <h4 style={{ fontSize: "1rem", fontWeight: 700, marginTop: "4px" }}>{phase.title}</h4>
+                          </div>
+                        </div>
+
+                        <p style={{ fontSize: "0.8rem", color: "var(--md-sys-color-on-surface-variant)" }}>
+                          {phase.description}
+                        </p>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px" }}>
+                          {phase.meals.map((m, mIdx) => (
+                            <div
+                              key={mIdx}
+                              style={{
+                                backgroundColor: "var(--md-sys-color-surface-container-high)",
+                                padding: "10px",
+                                borderRadius: "var(--md-sys-shape-corner-extra-small)",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "3px",
+                              }}
+                            >
+                              <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--md-sys-color-primary)", textTransform: "uppercase" }}>
+                                {m.slot}
+                              </span>
+                              <p style={{ fontSize: "0.8rem", color: "var(--md-sys-color-on-surface)" }}>{m.idea}</p>
+                              <span style={{ fontSize: "0.72rem", color: "var(--md-sys-color-tertiary)", fontWeight: 600 }}>{m.macros}</span>
                             </div>
                           ))}
                         </div>
@@ -1767,284 +1684,232 @@ export default function GymManeApp() {
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 5: SEGUIMIENTO (INYECCIÓN SEMANAL + SÍNTOMAS + PROGRESO CORPORAL) */}
-        {/* ========================================================================= */}
-        {activeTab === "seguimiento" && (
-          <section className="tab-section tab-fade-in">
-            {/* View Selector */}
-            <div className="subview-nav-bar">
-              <button
-                className={`subview-nav-btn ${trackingSubView === "injection" ? "active" : ""}`}
-                onClick={() => setTrackingSubView("injection")}
-              >
-                <Syringe size={16} /> Inyección & Rotación
-              </button>
-              <button
-                className={`subview-nav-btn ${trackingSubView === "symptoms" ? "active" : ""}`}
-                onClick={() => setTrackingSubView("symptoms")}
-              >
-                <HeartPulse size={16} /> Control de Síntomas
-              </button>
-              <button
-                className={`subview-nav-btn ${trackingSubView === "progress" ? "active" : ""}`}
-                onClick={() => setTrackingSubView("progress")}
-              >
-                <TrendingUp size={16} /> Peso, Medidas e IMC
-              </button>
+              )}
             </div>
+          )}
 
-            {/* SUBVIEW A: INYECCIÓN SEMANAL Y ROTACIÓN */}
-            {trackingSubView === "injection" && (
-              <div className="injection-tracker-wrap">
-                {/* Anatomical Rotation Diagram */}
-                <div className="rotation-map-card">
-                  <div className="card-header-row">
-                    <div>
-                      <h3 className="section-title">Mapa de Rotación de 6 Zonas</h3>
-                      <p className="section-subtitle">
-                        Rotar el sitio de inyección cada semana evita endurecimiento del tejido graso (lipodistrofia).
-                      </p>
-                    </div>
-                    <span className="suggested-site-badge">
-                      Sugerida: <strong>{overview.nextSiteSuggestion.short}</strong>
-                    </span>
-                  </div>
+          {/* ========================================================================= */}
+          {/* TAB 5: SEGUIMIENTO (INYECCIÓN + SÍNTOMAS + MÉTRICAS) */}
+          {/* ========================================================================= */}
+          {activeTab === "seguimiento" && (
+            <div className="tab-pane-view">
+              {/* Segmented Buttons */}
+              <div className="m3-segmented-button-row">
+                <button
+                  className={`m3-segment-item ${trackingSubView === "injection" ? "active" : ""}`}
+                  onClick={() => setTrackingSubView("injection")}
+                >
+                  <Syringe size={16} /> Inyección & Rotación
+                </button>
+                <button
+                  className={`m3-segment-item ${trackingSubView === "symptoms" ? "active" : ""}`}
+                  onClick={() => setTrackingSubView("symptoms")}
+                >
+                  <HeartPulse size={16} /> Control de Síntomas
+                </button>
+                <button
+                  className={`m3-segment-item ${trackingSubView === "progress" ? "active" : ""}`}
+                  onClick={() => setTrackingSubView("progress")}
+                >
+                  <TrendingUp size={16} /> Peso, Medidas e IMC
+                </button>
+              </div>
 
-                  {/* Interactive Site Grid */}
-                  <div className="injection-sites-grid">
-                    {INJECTION_SITES.map((site) => {
-                      const isSuggested = overview.nextSiteSuggestion.id === site.id;
-                      const isSelected = injSite === site.id;
-                      return (
-                        <div
-                          key={site.id}
-                          className={`site-card ${isSuggested ? "suggested" : ""} ${isSelected ? "selected" : ""}`}
-                          onClick={() => setInjSite(site.id)}
-                        >
-                          <div className="site-card-top">
-                            <span className="site-zone-tag">{site.zone}</span>
-                            {isSuggested && <span className="site-recom-chip">Recomendada</span>}
-                          </div>
-                          <h4 className="site-name">{site.label}</h4>
-                          <p className="site-tip">{site.tip}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Log Dose Form */}
-                <div className="log-dose-card">
-                  <h4 className="card-subtitle">Registrar Inyección Semanal</h4>
-                  <form onSubmit={handleAddInjection} className="log-dose-form">
-                    <div className="form-row-multi">
+              {/* INYECCIÓN & ROTACIÓN */}
+              {trackingSubView === "injection" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="m3-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <label className="form-label">Medicamento:</label>
-                        <select
-                          className="form-select"
-                          value={state.profile.medicationId}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            saveState((prev) => ({
-                              ...prev,
-                              profile: { ...prev.profile, medicationId: val },
-                            }));
-                          }}
-                        >
-                          {MEDICATIONS.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
+                        <h4 className="card-header-title">Rotación de 6 Sitios Anatómicos</h4>
+                        <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)" }}>
+                          Previene lipodistrofia subcutánea
+                        </span>
                       </div>
-
-                      <div>
-                        <label className="form-label">Dosis:</label>
-                        <select
-                          className="form-select"
-                          value={injDose}
-                          onChange={(e) => setInjDose(e.target.value)}
-                        >
-                          {currentMed.doses.map((d) => (
-                            <option key={d} value={d}>
-                              {d}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="form-label">Sitio de Inyección:</label>
-                        <select
-                          className="form-select"
-                          value={injSite}
-                          onChange={(e) => setInjSite(e.target.value)}
-                        >
-                          {INJECTION_SITES.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="form-label">Peso del día ({unitLabel}):</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          placeholder={overview.latestWeight.toString()}
-                          value={injWeight}
-                          onChange={(e) => setInjWeight(e.target.value)}
-                          className="form-input"
-                        />
-                      </div>
+                      <span className="treatment-active-pill">
+                        Sugerido: {overview.nextSiteSuggestion.short}
+                      </span>
                     </div>
 
-                    <div className="form-row-full">
-                      <label className="form-label">Notas u observaciones (opcional):</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Sin dolor, buena hidratación, leve ardor que cedió en 2 min…"
-                        value={injNotes}
-                        onChange={(e) => setInjNotes(e.target.value)}
-                        className="form-input"
-                      />
-                    </div>
-
-                    <button type="submit" className="submit-dose-btn">
-                      <Syringe size={16} /> Guardar Registro de Dosis
-                    </button>
-                  </form>
-                </div>
-
-                {/* History of Doses */}
-                <div className="dose-history-card">
-                  <h4 className="card-subtitle">Historial de Aplicaciones</h4>
-                  {state.injections?.length === 0 ? (
-                    <p className="empty-msg">No hay dosis registradas aún.</p>
-                  ) : (
-                    <div className="dose-history-list">
-                      {state.injections.map((inj) => {
-                        const siteObj = INJECTION_SITES.find((s) => s.id === inj.site);
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                      {INJECTION_SITES.map((site) => {
+                        const isSuggested = overview.nextSiteSuggestion.id === site.id;
+                        const isSelected = injSite === site.id;
                         return (
-                          <div key={inj.id} className="dose-history-item">
-                            <div className="dose-item-left">
-                              <span className="dose-date">{inj.date}</span>
-                              <strong className="dose-amount">{inj.dose}</strong>
-                              <span className="dose-site-tag">{siteObj?.label || inj.site}</span>
-                            </div>
-                            <div className="dose-item-right">
-                              {inj.weight && (
-                                <span className="dose-weight">
-                                  {inj.weight} {unitLabel}
+                          <div
+                            key={site.id}
+                            onClick={() => setInjSite(site.id)}
+                            style={{
+                              padding: "12px",
+                              backgroundColor: "var(--md-sys-color-surface-container-high)",
+                              border: isSelected
+                                ? "1px solid var(--md-sys-color-primary)"
+                                : isSuggested
+                                ? "1px solid var(--md-sys-color-tertiary)"
+                                : "1px solid var(--md-sys-color-outline-variant)",
+                              borderRadius: "var(--md-sys-shape-corner-small)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--md-sys-color-outline)", textTransform: "uppercase" }}>
+                                {site.zone}
+                              </span>
+                              {isSuggested && (
+                                <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--md-sys-color-tertiary)" }}>
+                                  Sugerido
                                 </span>
                               )}
-                              {inj.notes && <p className="dose-note-text">"{inj.notes}"</p>}
                             </div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: 700, marginTop: "2px" }}>{site.label}</div>
+                            <p style={{ fontSize: "0.72rem", color: "var(--md-sys-color-on-surface-variant)", marginTop: "4px" }}>{site.tip}</p>
                           </div>
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {/* SUBVIEW B: CONTROL DE SÍNTOMAS */}
-            {trackingSubView === "symptoms" && (
-              <div className="symptoms-tracker-wrap">
-                {/* Clinical Log Form */}
-                <div className="log-symptom-card">
-                  <h4 className="card-subtitle">Reportar Síntoma de Hoy</h4>
-                  <form onSubmit={handleAddSymptomLog} className="log-symptom-form">
-                    <div className="form-row-multi">
-                      <div>
-                        <label className="form-label">Síntoma:</label>
-                        <select
-                          className="form-select"
-                          value={selectedSymptomId}
-                          onChange={(e) => setSelectedSymptomId(e.target.value)}
-                        >
-                          {SYMPTOM_CATALOG.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.icon} {s.name}
-                            </option>
-                          ))}
-                        </select>
+                  {/* Form */}
+                  <div className="m3-card">
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700 }}>Registrar Dosis Semanal</h4>
+                    <form onSubmit={handleAddInjection} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Dosis:</label>
+                          <select value={injDose} onChange={(e) => setInjDose(e.target.value)} style={{ width: "100%" }}>
+                            {currentMed.doses.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Sitio:</label>
+                          <select value={injSite} onChange={(e) => setInjSite(e.target.value)} style={{ width: "100%" }}>
+                            {INJECTION_SITES.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="form-label">Intensidad:</label>
-                        <select
-                          className="form-select"
-                          value={symptomSeverity}
-                          onChange={(e) => setSymptomSeverity(e.target.value)}
-                        >
-                          <option value="leve">Leve (Casi imperceptible)</option>
-                          <option value="moderado">Moderado (Molesto pero manejable)</option>
-                          <option value="fuerte">Fuerte (Requiere atención médica si persiste)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-row-full">
-                      <label className="form-label">Detalles o comida previa:</label>
                       <input
                         type="text"
-                        placeholder="Ej: Apareció 1 hora después de comer fuera de casa…"
+                        placeholder="Observaciones (ej. Buena tolerancia, hidratación previa)…"
+                        value={injNotes}
+                        onChange={(e) => setInjNotes(e.target.value)}
+                      />
+
+                      <button type="submit" className="m3-btn-filled" style={{ alignSelf: "flex-end" }}>
+                        <Syringe size={16} /> Guardar Inyección
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Dose History */}
+                  <div className="m3-card">
+                    <h4 style={{ fontSize: "0.9rem", fontWeight: 700 }}>Historial de Dosis</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {state.injections.map((inj) => {
+                        const siteObj = INJECTION_SITES.find((s) => s.id === inj.site);
+                        return (
+                          <div
+                            key={inj.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "8px 12px",
+                              backgroundColor: "var(--md-sys-color-surface-container-high)",
+                              borderRadius: "var(--md-sys-shape-corner-extra-small)",
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: "0.85rem", color: "var(--md-sys-color-tertiary)" }}>{inj.dose}</strong>
+                              <span style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", marginLeft: "8px" }}>
+                                {siteObj?.label || inj.site}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)" }}>{inj.date}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CONTROL DE SÍNTOMAS */}
+              {trackingSubView === "symptoms" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="m3-card">
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700 }}>Reportar Síntoma del Día</h4>
+                    <form onSubmit={handleAddSymptomLog} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "8px" }}>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Síntoma:</label>
+                          <select value={selectedSymptomId} onChange={(e) => setSelectedSymptomId(e.target.value)} style={{ width: "100%" }}>
+                            {SYMPTOM_CATALOG.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Severidad:</label>
+                          <select value={symptomSeverity} onChange={(e) => setSymptomSeverity(e.target.value)} style={{ width: "100%" }}>
+                            <option value="leve">Leve</option>
+                            <option value="moderado">Moderado</option>
+                            <option value="fuerte">Fuerte</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="Contexto o alimento previo ingerido…"
                         value={symptomNote}
                         onChange={(e) => setSymptomNote(e.target.value)}
-                        className="form-input"
                       />
-                    </div>
 
-                    <button type="submit" className="submit-symptom-btn">
-                      <HeartPulse size={16} /> Registrar en Bitácora
-                    </button>
-                  </form>
-                </div>
+                      <button type="submit" className="m3-btn-filled" style={{ alignSelf: "flex-end" }}>
+                        <HeartPulse size={16} /> Guardar Síntoma
+                      </button>
+                    </form>
+                  </div>
 
-                {/* 8 Symptoms Comprehensive Relief Catalog */}
-                <div className="symptom-catalog-section">
-                  <h4 className="card-subtitle">Guía de Alivio Inmediato para los 8 Síntomas Más Frecuentes</h4>
-                  <div className="symptom-cards-list">
+                  {/* 8 Symptoms Reference */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     {SYMPTOM_CATALOG.map((sym) => (
-                      <div key={sym.id} className="symptom-catalog-card">
-                        <div className="sym-card-header">
-                          <span className="sym-icon">{sym.icon}</span>
-                          <div>
-                            <h4 className="sym-name">{sym.name}</h4>
-                            <span className="sym-category-tag">{sym.category}</span>
-                          </div>
+                      <div key={sym.id} className="symptom-clinical-item">
+                        <div className="symptom-item-header">
+                          <span className="symptom-name-text">{sym.name}</span>
+                          <span className="symptom-cat-badge">{sym.category}</span>
                         </div>
 
-                        <div className="sym-why-box">
-                          <strong>¿Por qué ocurre con GLP-1?</strong> {sym.whyItHappens}
+                        <div className="symptom-why-text">
+                          <strong>Mecanismo fisiológico:</strong> {sym.whyItHappens}
                         </div>
 
-                        <div className="sym-actions-grid">
-                          <div className="sym-action-col eat">
-                            <span className="action-col-title green">✓ QUÉ CONSUMIR O HACER HOY:</span>
+                        <div className="symptom-actions-split">
+                          <div className="symptom-box-eat">
+                            <span className="box-title green">Medidas de alivio:</span>
                             <ul>
-                              {sym.whatToEat.map((item, idx) => (
-                                <li key={idx}>{item}</li>
+                              {sym.whatToEat.map((it, idx) => (
+                                <li key={idx}>{it}</li>
                               ))}
                             </ul>
                           </div>
 
-                          <div className="sym-action-col avoid">
-                            <span className="action-col-title red">✗ QUÉ EVITAR:</span>
+                          <div className="symptom-box-avoid">
+                            <span className="box-title red">Evitar:</span>
                             <ul>
-                              {sym.whatToAvoid.map((item, idx) => (
-                                <li key={idx}>{item}</li>
+                              {sym.whatToAvoid.map((it, idx) => (
+                                <li key={idx}>{it}</li>
                               ))}
                             </ul>
                           </div>
@@ -2053,217 +1918,172 @@ export default function GymManeApp() {
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* SUBVIEW C: PESO, MEDIDAS, IMC Y HEATMAP */}
-            {trackingSubView === "progress" && (
-              <div className="progress-tracker-wrap">
-                {/* Weight & BMI Card */}
-                <div className="progress-hero-grid">
-                  <div className="progress-metric-card">
-                    <span className="metric-label">PESO ACTUAL</span>
-                    <div className="metric-val-row">
-                      <span className="metric-large">{overview.latestWeight}</span>
-                      <span className="metric-unit">{unitLabel}</span>
-                    </div>
-                    <span className="metric-diff-tag">
-                      Perdido: -{overview.lostSoFar} {unitLabel} de {overview.startWeight} {unitLabel} iniciales
-                    </span>
-                  </div>
-
-                  {/* BMI Visual Gauge */}
-                  <div className="progress-metric-card bmi-card">
-                    <span className="metric-label">ÍNDICE DE MASA CORPORAL (IMC)</span>
-                    <div className="metric-val-row">
-                      <span className="metric-large">{overview.bmi}</span>
-                      <span className="bmi-cat-pill" style={{ backgroundColor: `${overview.bmiColor}22`, color: overview.bmiColor, borderColor: overview.bmiColor }}>
-                        {overview.bmiCategory}
+              {/* PESO, MEDIDAS, IMC Y HEATMAP */}
+              {trackingSubView === "progress" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="metrics-twin-grid">
+                    <div className="metric-kpi-card">
+                      <span className="kpi-label">Peso Actual</span>
+                      <div className="kpi-value-row">
+                        <span className="kpi-main-number num-tabular">{overview.latestWeight}</span>
+                        <span className="kpi-unit">{unitLabel}</span>
+                      </div>
+                      <span className="kpi-footer-sub">
+                        -{overview.lostSoFar} {unitLabel} desde {overview.startWeight} {unitLabel}
                       </span>
                     </div>
-                    <div className="bmi-gauge-track">
-                      <div className="bmi-gauge-fill" style={{ width: `${Math.min(100, Math.max(10, ((overview.bmi - 15) / 25) * 100))}%`, backgroundColor: overview.bmiColor }}></div>
-                    </div>
-                    <div className="bmi-gauge-scale">
-                      <span>18.5</span>
-                      <span>25.0</span>
-                      <span>30.0</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Log Weight and Measurements */}
-                <div className="log-weight-card">
-                  <h4 className="card-subtitle">Registrar Peso y Medidas</h4>
-                  <form onSubmit={handleAddWeight} className="log-weight-form">
-                    <div className="form-row-multi">
-                      <div>
-                        <label className="form-label">Nuevo Peso ({unitLabel}):</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          placeholder={overview.latestWeight.toString()}
-                          value={newWeightVal}
-                          onChange={(e) => setNewWeightVal(e.target.value)}
-                          className="form-input"
-                          required
-                        />
+                    <div className="metric-kpi-card">
+                      <span className="kpi-label">Índice de Masa Corporal (IMC)</span>
+                      <div className="kpi-value-row">
+                        <span className="kpi-main-number num-tabular">{overview.bmi}</span>
+                        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: overview.bmiColor }}>
+                          {overview.bmiCategory}
+                        </span>
                       </div>
-                      <div>
-                        <label className="form-label">Cintura (cm):</label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          placeholder="cm"
-                          value={newWaistCm}
-                          onChange={(e) => setNewWaistCm(e.target.value)}
-                          className="form-input"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label">Cadera (cm):</label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          placeholder="cm"
-                          value={newHipCm}
-                          onChange={(e) => setNewHipCm(e.target.value)}
-                          className="form-input"
-                        />
-                      </div>
-                    </div>
-                    <div className="form-row-full">
-                      <input
-                        type="text"
-                        placeholder="Nota (ej. Tomado en ayunas tras el baño)…"
-                        value={newWeightNote}
-                        onChange={(e) => setNewWeightNote(e.target.value)}
-                        className="form-input"
-                      />
-                    </div>
-                    <button type="submit" className="submit-weight-btn">
-                      <Scale size={16} /> Guardar Medida
-                    </button>
-                  </form>
-                </div>
-
-                {/* Weight Evolution List */}
-                <div className="weight-history-card">
-                  <h4 className="card-subtitle">Historial de Peso y Medidas</h4>
-                  <div className="weights-table-wrapper">
-                    <table className="weights-table">
-                      <thead>
-                        <tr>
-                          <th>FECHA</th>
-                          <th>PESO</th>
-                          <th>CINTURA</th>
-                          <th>CADERA</th>
-                          <th>NOTAS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...(state.weights || [])].reverse().map((w) => (
-                          <tr key={w.id}>
-                            <td className="w-date-cell">{w.date}</td>
-                            <td className="w-weight-cell">
-                              <strong>
-                                {w.weight} {unitLabel}
-                              </strong>
-                            </td>
-                            <td>{w.waistCm ? `${w.waistCm} cm` : "—"}</td>
-                            <td>{w.hipCm ? `${w.hipCm} cm` : "—"}</td>
-                            <td className="w-note-cell">{w.note || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Monthly Workout Heatmap */}
-                <div className="heatmap-card">
-                  <div className="card-header-row">
-                    <h4 className="card-subtitle">Constancia de Entrenamientos (Últimos 28 Días)</h4>
-                    <span className="heatmap-streak">
-                      <Zap size={14} color="#FF6B35" /> Racha Activa
-                    </span>
-                  </div>
-
-                  <div className="heatmap-grid">
-                    {Array.from({ length: 28 }, (_, i) => {
-                      const dIso = offsetDate(todayISO(), -27 + i);
-                      const hadWorkout = (state.workouts || []).some((w) => w.date === dIso);
-                      return (
+                      <div className="bmi-bar-track">
                         <div
-                          key={dIso}
-                          className={`heatmap-cell ${hadWorkout ? "active" : ""}`}
-                          title={`${dIso}: ${hadWorkout ? "Entrenamiento completado" : "Descanso"}`}
+                          className="bmi-bar-fill"
+                          style={{
+                            width: `${Math.min(100, Math.max(10, ((overview.bmi - 15) / 25) * 100))}%`,
+                            backgroundColor: overview.bmiColor,
+                          }}
                         ></div>
-                      );
-                    })}
-                  </div>
-                  <div className="heatmap-legend-row">
-                    <span>Menos activo</span>
-                    <div className="heatmap-legend-dots">
-                      <span className="dot-level l0"></span>
-                      <span className="dot-level l1"></span>
+                      </div>
+                      <div className="bmi-bar-legend">
+                        <span>18.5</span>
+                        <span>25.0</span>
+                        <span>30.0</span>
+                      </div>
                     </div>
-                    <span>Día entrenado</span>
+                  </div>
+
+                  {/* Weight Log Form */}
+                  <div className="m3-card">
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700 }}>Registrar Medida Corporal</h4>
+                    <form onSubmit={handleAddWeight} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Peso ({unitLabel}):</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder={overview.latestWeight.toString()}
+                            value={newWeightVal}
+                            onChange={(e) => setNewWeightVal(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Cintura (cm):</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="cm"
+                            value={newWaistCm}
+                            onChange={(e) => setNewWaistCm(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "0.72rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "4px" }}>Cadera (cm):</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="cm"
+                            value={newHipCm}
+                            onChange={(e) => setNewHipCm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <button type="submit" className="m3-btn-filled" style={{ alignSelf: "flex-end" }}>
+                        <Scale size={16} /> Guardar Medida
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* 28-Day Consistency Heatmap */}
+                  <div className="m3-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ fontSize: "0.9rem", fontWeight: 700 }}>Constancia de Entrenamientos (28 Días)</h4>
+                      <span className="treatment-active-pill">
+                        <Zap size={12} /> {overview.weeklyWorkoutsCount} esta semana
+                      </span>
+                    </div>
+
+                    <div className="heatmap-card-grid">
+                      {Array.from({ length: 28 }, (_, i) => {
+                        const dIso = offsetDate(todayISO(), -27 + i);
+                        const hadWorkout = (state.workouts || []).some((w) => w.date === dIso);
+                        return (
+                          <div
+                            key={dIso}
+                            className={`heatmap-square ${hadWorkout ? "trained" : ""}`}
+                            title={`${dIso}: ${hadWorkout ? "Entrenado" : "Descanso"}`}
+                          ></div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </section>
-        )}
-      </main>
+              )}
+            </div>
+          )}
+        </main>
 
-      {/* Settings / Profile Modal */}
+        {/* 3. M3 Bottom Navigation Bar (Mobile / Compact < 768px) */}
+        <nav className="m3-navigation-bar" aria-label="Navegación principal inferior">
+          {NAV_DESTINATIONS.map((dest) => {
+            const Icon = dest.icon;
+            const isActive = activeTab === dest.id;
+            return (
+              <button
+                key={dest.id}
+                className={`m3-nav-item ${isActive ? "active" : ""}`}
+                onClick={() => setActiveTab(dest.id)}
+              >
+                <div className="m3-nav-indicator">
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span className="m3-nav-label">{dest.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* M3 Modal Sheet for Settings & Profile */}
       {settingsOpen && (
-        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
-          <div className="modal-sheet settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Mi Perfil y Ajustes</h3>
-              <button className="modal-close-btn" onClick={() => setSettingsOpen(false)}>
+        <div className="m3-modal-scrim" onClick={() => setSettingsOpen(false)}>
+          <div className="m3-modal-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="m3-drag-handle-bar"></div>
+            <div className="m3-modal-top">
+              <h3 className="m3-modal-title">Perfil y Ajustes</h3>
+              <button className="m3-icon-button" onClick={() => setSettingsOpen(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            <div className="modal-body-content">
-              <div className="settings-section">
-                <h4 className="settings-group-title">Datos Personales y Tratamiento</h4>
-                <div className="form-row-multi">
+            <div className="m3-modal-body">
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 700 }}>Nombre de usuario:</label>
+                <input
+                  type="text"
+                  value={profile.name}
+                  onChange={(e) =>
+                    saveState((prev) => ({
+                      ...prev,
+                      profile: { ...prev.profile, name: e.target.value },
+                    }))
+                  }
+                />
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   <div>
-                    <label className="form-label">Nombre:</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={profile.name}
-                      onChange={(e) =>
-                        saveState((prev) => ({
-                          ...prev,
-                          profile: { ...prev.profile, name: e.target.value },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Estatura (cm):</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={profile.heightCm}
-                      onChange={(e) =>
-                        saveState((prev) => ({
-                          ...prev,
-                          profile: { ...prev.profile, heightCm: Number(e.target.value) },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Unidad de Peso:</label>
+                    <label style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 700 }}>Unidad de Peso:</label>
                     <select
-                      className="form-select"
                       value={profile.unit}
                       onChange={(e) =>
                         saveState((prev) => ({
@@ -2271,33 +2091,17 @@ export default function GymManeApp() {
                           profile: { ...prev.profile, unit: e.target.value },
                         }))
                       }
+                      style={{ width: "100%" }}
                     >
                       <option value="lb">Libras (lb)</option>
                       <option value="kg">Kilogramos (kg)</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="form-row-multi">
                   <div>
-                    <label className="form-label">Peso Meta ({unitLabel}):</label>
+                    <label style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 700 }}>Meta Proteína (g):</label>
                     <input
                       type="number"
-                      className="form-input"
-                      value={profile.goalWeight}
-                      onChange={(e) =>
-                        saveState((prev) => ({
-                          ...prev,
-                          profile: { ...prev.profile, goalWeight: Number(e.target.value) },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Meta de Proteína Diaria (g):</label>
-                    <input
-                      type="number"
-                      className="form-input"
                       value={profile.proteinGoalG}
                       onChange={(e) =>
                         saveState((prev) => ({
@@ -2308,73 +2112,77 @@ export default function GymManeApp() {
                     />
                   </div>
                 </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 700 }}>Peso Meta ({unitLabel}):</label>
+                    <input
+                      type="number"
+                      value={profile.goalWeight}
+                      onChange={(e) =>
+                        saveState((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, goalWeight: Number(e.target.value) },
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "var(--md-sys-color-outline)", fontWeight: 700 }}>Estatura (cm):</label>
+                    <input
+                      type="number"
+                      value={profile.heightCm}
+                      onChange={(e) =>
+                        saveState((prev) => ({
+                          ...prev,
+                          profile: { ...prev.profile, heightCm: Number(e.target.value) },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="settings-section">
-                <h4 className="settings-group-title">Privacidad y Respaldo de Datos (100% Offline)</h4>
-                <p className="settings-note">
-                  Todos tus registros médicos, fotos y entrenamientos se guardan exclusivamente en la memoria de tu
-                  dispositivo sin subir a ningún servidor.
-                </p>
-
-                <div className="backup-actions-row">
-                  <button className="backup-btn export" onClick={exportBackup}>
-                    <Download size={16} /> Exportar Respaldo JSON
+              <div style={{ borderTop: "1px solid var(--md-sys-color-outline-variant)", paddingTop: "14px" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--md-sys-color-outline)", display: "block", marginBottom: "8px" }}>
+                  Almacenamiento Local (100% Offline y Privado)
+                </span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button className="m3-btn-outlined" style={{ flex: 1 }} onClick={exportBackup}>
+                    <Download size={16} /> Exportar JSON
                   </button>
-                  <label className="backup-btn import">
-                    <Upload size={16} /> Importar Respaldo
+                  <label className="m3-btn-outlined" style={{ flex: 1, cursor: "pointer" }}>
+                    <Upload size={16} /> Importar JSON
                     <input type="file" accept=".json" onChange={importBackup} style={{ display: "none" }} />
                   </label>
                 </div>
               </div>
 
-              <div className="settings-section">
-                <button
-                  className="reset-demo-btn"
-                  onClick={() => {
-                    if (confirm("¿Deseas reiniciar los datos a la configuración inicial de fábrica?")) {
-                      const init = defaultState();
-                      saveState(init);
-                      showToast("Datos reiniciados");
-                      setSettingsOpen(false);
-                    }
-                  }}
-                >
-                  <RotateCcw size={16} /> Reiniciar Datos a Valores por Defecto
-                </button>
-              </div>
+              <button
+                className="m3-btn-tonal"
+                style={{ color: "var(--md-sys-color-error)", marginTop: "6px" }}
+                onClick={() => {
+                  if (confirm("¿Deseas restablecer los valores de fábrica?")) {
+                    saveState(defaultState());
+                    showToast("Valores restablecidos");
+                    setSettingsOpen(false);
+                  }
+                }}
+              >
+                <RotateCcw size={16} /> Restablecer Valores
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* M3 Snackbar Toast */}
       {toastMessage && (
-        <div className="toast-notification">
+        <div className="m3-snackbar">
           <span>{toastMessage}</span>
         </div>
       )}
-
-      {/* Fixed Bottom Navigation (5 Tabs) */}
-      <nav className="bottom-nav-bar" aria-label="Navegación principal">
-        {NAV_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              className={`nav-tab-btn ${isActive ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <div className="nav-icon-wrap">
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span className="nav-label">{tab.label}</span>
-              {isActive && <span className="active-indicator-dot"></span>}
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 }

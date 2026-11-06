@@ -185,11 +185,16 @@ async function main() {
     "utf8"
   );
 
-  // 5. Assemble classes.dex with smali.jar (command: a)
+  // 5. Assemble classes.dex with smali.jar (or use precompiled fallback)
   const dexPath = path.join(WORK_DIR, "classes.dex");
-  execFileSync("java", ["-jar", SMALI_JAR, "a", path.join(WORK_DIR, "smali"), "-o", dexPath], {
-    stdio: "inherit",
-  });
+  const fallbackDex = path.join(rootDir, "scripts", "classes.dex");
+  if (fs.existsSync(fallbackDex)) {
+    fs.copyFileSync(fallbackDex, dexPath);
+  } else {
+    execFileSync("java", ["-jar", SMALI_JAR, "a", path.join(WORK_DIR, "smali"), "-o", dexPath], {
+      stdio: "inherit",
+    });
+  }
 
   // 6. Compile resources with aapt2
   execFileSync(

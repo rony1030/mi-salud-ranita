@@ -124,13 +124,13 @@ if (document.readyState === "loading") {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0D0D0F" />
+  <meta name="theme-color" content="#0E0F12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>GymMane GLP-1 · Fuerza y Salud Metabólica (Mounjaro / Ozempic)</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <style>
-    html, body, #root { min-height: 100%; width: 100%; margin: 0; padding: 0; background-color: #0D0D0F; }
+    html, body, #root { min-height: 100%; width: 100%; margin: 0; padding: 0; background-color: #0E0F12; }
     ${css}
   </style>
 </head>
@@ -138,7 +138,7 @@ if (document.readyState === "loading") {
   <div id="root">
     <main class="loading-screen">
       <div class="loading-card">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF8A65" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
           <path d="m6.5 6.5 11 11"/>
           <path d="m21 21-1-1"/>
           <path d="m3 3 1 1"/>
