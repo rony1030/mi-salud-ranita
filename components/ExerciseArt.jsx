@@ -34,7 +34,7 @@ function computeViewBox(frames) {
 
 export default function ExerciseArt({
   slug,
-  height = 170,
+  height = 180,
   live = true,
   className = "",
 }) {
@@ -103,7 +103,7 @@ export default function ExerciseArt({
         className={`exercise-art-box fallback ${className}`}
         style={{ height }}
       >
-        <Dumbbell size={32} />
+        <Dumbbell size={36} color="#FF6B35" />
       </div>
     );
   }
@@ -118,11 +118,11 @@ export default function ExerciseArt({
         height="100%"
         preserveAspectRatio="xMidYMid meet"
       >
-        <path d={currentPath} fill="#0c094e" fillRule="evenodd" />
+        <path d={currentPath} fill="#0F172A" fillRule="evenodd" />
       </svg>
       {data.frames.length > 1 && (
         <span className="exercise-art-badge">
-          {live ? `Animado · ${frameIdx + 1}/${data.frames.length}` : "Guía visual"}
+          {live ? `Animación ${frameIdx + 1}/${data.frames.length}` : "Técnica"}
         </span>
       )}
     </div>

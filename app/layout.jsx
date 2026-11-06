@@ -1,27 +1,30 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Mi Salud · Ranita GLP-1 y Entrenamiento (Mounjaro / Ozempic)",
+  title: "GymMane GLP-1 · Fuerza y Salud Metabólica (Mounjaro / Ozempic)",
   description:
-    "Guía gratuita de dieta sugerida, control de síntomas, seguimiento semanal de inyecciones Mounjaro/Ozempic y entrenamiento con mapa corporal basado en GymMane.",
+    "Aplicación profesional de gimnasio basada en GymMane con seguimiento clínico GLP-1 (Mounjaro / Ozempic), nutrición por macros, semáforo de alimentos, control de síntomas y series en vivo.",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: {
     capable: true,
-    title: "Mi Salud Ranita",
-    statusBarStyle: "default",
+    title: "GymMane GLP-1",
+    statusBarStyle: "black-translucent",
   },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0c094e",
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0D0D0F",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es-DO">
+    <html lang="es">
       <body>{children}</body>
     </html>
   );

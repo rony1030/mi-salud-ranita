@@ -9,15 +9,20 @@ const rootDir = path.resolve(__dirname, "..");
 const AAPT2 = "/tmp/apk-tools/node_modules/aaptjs3/bin/x64/linux/aapt2";
 const SMALI_JAR = "/tmp/apk-tools/smali.jar";
 const ANDROID_JAR = "/tmp/apk-tools/platforms/android-33/android.jar";
-const WORK_DIR = "/tmp/apk-build-ranita";
+const WORK_DIR = "/tmp/apk-build-gymmane";
 
 async function main() {
   fs.rmSync(WORK_DIR, { recursive: true, force: true });
   fs.mkdirSync(path.join(WORK_DIR, "res", "drawable"), { recursive: true });
   fs.mkdirSync(path.join(WORK_DIR, "res", "values"), { recursive: true });
-  fs.mkdirSync(path.join(WORK_DIR, "smali", "com", "misalud", "ranitaglp1"), { recursive: true });
+  fs.mkdirSync(path.join(WORK_DIR, "smali", "com", "gymmane", "glp1"), { recursive: true });
   fs.mkdirSync(path.join(WORK_DIR, "assets"), { recursive: true });
   fs.mkdirSync(path.join(WORK_DIR, "compiled"), { recursive: true });
+
+  // Ensure AAPT2 is executable
+  try {
+    fs.chmodSync(AAPT2, 0o755);
+  } catch {}
 
   // 1. Copy standalone index.html and art-bundle.js into assets/
   const standaloneHtml = path.join(rootDir, "dist-apk", "index.html");
@@ -27,13 +32,16 @@ async function main() {
   }
   fs.copyFileSync(standaloneHtml, path.join(WORK_DIR, "assets", "index.html"));
   fs.copyFileSync(artBundleJs, path.join(WORK_DIR, "assets", "art-bundle.js"));
+  if (fs.existsSync(path.join(rootDir, "dist-apk", "icon.svg"))) {
+    fs.copyFileSync(path.join(rootDir, "dist-apk", "icon.svg"), path.join(WORK_DIR, "assets", "icon.svg"));
+  }
 
-  // 2. Write AndroidManifest.xml (versionCode 2 / 1.1.0)
+  // 2. Write AndroidManifest.xml (versionCode 3 / 2.0.0 GymMane GLP-1)
   const manifestXml = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.misalud.ranitaglp1"
-    android:versionCode="2"
-    android:versionName="1.1.0">
+    package="com.gymmane.glp1"
+    android:versionCode="3"
+    android:versionName="2.0.0">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="29" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -46,7 +54,7 @@ async function main() {
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <activity
-            android:name="com.misalud.ranitaglp1.MainActivity"
+            android:name="com.gymmane.glp1.MainActivity"
             android:label="@string/app_name"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">
@@ -59,53 +67,52 @@ async function main() {
 </manifest>`;
   fs.writeFileSync(path.join(WORK_DIR, "AndroidManifest.xml"), manifestXml, "utf8");
 
-  // 3. Write strings.xml and Ranita vector icon drawable
+  // 3. Write strings.xml and GymMane vector icon drawable
   const stringsXml = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Mi Salud Ranita GLP-1</string>
+    <string name="app_name">GymMane GLP-1</string>
 </resources>`;
   fs.writeFileSync(path.join(WORK_DIR, "res", "values", "strings.xml"), stringsXml, "utf8");
 
+  // Athletic Dumbbell & Clinical Pulse Vector Icon
   const iconXml = `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="100"
     android:viewportHeight="100">
+    <!-- Obsidian Dark Background -->
     <path
-        android:fillColor="#0c094e"
+        android:fillColor="#0D0D0F"
         android:pathData="M0,0h100v100h-100z" />
+    <!-- GymMane Orange Dumbbell Left Plate -->
     <path
-        android:fillColor="#4ade80"
-        android:pathData="M15,46a35,23 0 1,0 70,0a35,23 0 1,0 -70,0z" />
+        android:fillColor="#FF6B35"
+        android:pathData="M24,30 h8 v40 h-8 z" />
+    <!-- GymMane Orange Dumbbell Right Plate -->
     <path
-        android:fillColor="#4ade80"
-        android:pathData="M19,28a13,13 0 1,0 26,0a13,13 0 1,0 -26,0z" />
+        android:fillColor="#FF6B35"
+        android:pathData="M68,30 h8 v40 h-8 z" />
+    <!-- Steel Bar -->
     <path
-        android:fillColor="#4ade80"
-        android:pathData="M55,28a13,13 0 1,0 26,0a13,13 0 1,0 -26,0z" />
+        android:fillColor="#F4F4F6"
+        android:pathData="M32,46 h36 v8 h-36 z" />
+    <!-- Clinical Emerald Shield & Pulse -->
     <path
-        android:fillColor="#ffffff"
-        android:pathData="M23,27a9,9 0 1,0 18,0a9,9 0 1,0 -18,0z" />
+        android:fillColor="#10B981"
+        android:pathData="M50,60 L62,67 C62,80 50,88 50,88 C50,88 38,80 38,67 Z" />
+    <!-- ECG pulse line -->
     <path
-        android:fillColor="#ffffff"
-        android:pathData="M59,27a9,9 0 1,0 18,0a9,9 0 1,0 -18,0z" />
-    <path
-        android:fillColor="#0f172a"
-        android:pathData="M28,27a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0z" />
-    <path
-        android:fillColor="#0f172a"
-        android:pathData="M64,27a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0z" />
-    <path
-        android:strokeColor="#14532d"
-        android:strokeWidth="3.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
-        android:pathData="M36,51 Q50,62 64,51" />
+        android:strokeLineJoin="round"
+        android:pathData="M43,73 L47,73 L49,69 L51,77 L53,71 L55,73 L57,73" />
 </vector>`;
   fs.writeFileSync(path.join(WORK_DIR, "res", "drawable", "ic_launcher.xml"), iconXml, "utf8");
 
   // 4. Write MainActivity.smali (Full-screen WebView with DOMStorage/localStorage + Back navigation)
-  const mainActivitySmali = `.class public Lcom/misalud/ranitaglp1/MainActivity;
+  const mainActivitySmali = `.class public Lcom/gymmane/glp1/MainActivity;
 .super Landroid/app/Activity;
 
 .field private webView:Landroid/webkit/WebView;
@@ -123,7 +130,7 @@ async function main() {
 
     new-instance v0, Landroid/webkit/WebView;
     invoke-direct {v0, p0}, Landroid/webkit/WebView;-><init>(Landroid/content/Context;)V
-    iput-object v0, p0, Lcom/misalud/ranitaglp1/MainActivity;->webView:Landroid/webkit/WebView;
+    iput-object v0, p0, Lcom/gymmane/glp1/MainActivity;->webView:Landroid/webkit/WebView;
 
     invoke-virtual {v0}, Landroid/webkit/WebView;->getSettings()Landroid/webkit/WebSettings;
     move-result-object v1
@@ -145,7 +152,7 @@ async function main() {
     invoke-direct {v2}, Landroid/webkit/WebChromeClient;-><init>()V
     invoke-virtual {v0, v2}, Landroid/webkit/WebView;->setWebChromeClient(Landroid/webkit/WebChromeClient;)V
 
-    invoke-virtual {p0, v0}, Lcom/misalud/ranitaglp1/MainActivity;->setContentView(Landroid/view/View;)V
+    invoke-virtual {p0, v0}, Lcom/gymmane/glp1/MainActivity;->setContentView(Landroid/view/View;)V
 
     const-string v2, "file:///android_asset/index.html"
     invoke-virtual {v0, v2}, Landroid/webkit/WebView;->loadUrl(Ljava/lang/String;)V
@@ -156,14 +163,14 @@ async function main() {
 .method public onBackPressed()V
     .registers 2
 
-    iget-object v0, p0, Lcom/misalud/ranitaglp1/MainActivity;->webView:Landroid/webkit/WebView;
+    iget-object v0, p0, Lcom/gymmane/glp1/MainActivity;->webView:Landroid/webkit/WebView;
     if-eqz v0, :call_super
 
     invoke-virtual {v0}, Landroid/webkit/WebView;->canGoBack()Z
     move-result v0
     if-eqz v0, :call_super
 
-    iget-object v0, p0, Lcom/misalud/ranitaglp1/MainActivity;->webView:Landroid/webkit/WebView;
+    iget-object v0, p0, Lcom/gymmane/glp1/MainActivity;->webView:Landroid/webkit/WebView;
     invoke-virtual {v0}, Landroid/webkit/WebView;->goBack()V
     return-void
 
@@ -173,14 +180,14 @@ async function main() {
 .end method
 `;
   fs.writeFileSync(
-    path.join(WORK_DIR, "smali", "com", "misalud", "ranitaglp1", "MainActivity.smali"),
+    path.join(WORK_DIR, "smali", "com", "gymmane", "glp1", "MainActivity.smali"),
     mainActivitySmali,
     "utf8"
   );
 
-  // 5. Assemble classes.dex with smali.jar
+  // 5. Assemble classes.dex with smali.jar (command: a)
   const dexPath = path.join(WORK_DIR, "classes.dex");
-  execFileSync("java", ["-jar", SMALI_JAR, path.join(WORK_DIR, "smali"), "-o", dexPath], {
+  execFileSync("java", ["-jar", SMALI_JAR, "a", path.join(WORK_DIR, "smali"), "-o", dexPath], {
     stdio: "inherit",
   });
 
@@ -239,13 +246,13 @@ async function main() {
       "-validity",
       "10000",
       "-alias",
-      "ranita",
+      "gymmane",
       "-storepass",
-      "ranita123",
+      "gymmane123",
       "-keypass",
-      "ranita123",
+      "gymmane123",
       "-dname",
-      "CN=Mi Salud Ranita GLP-1, OU=Salud, O=Rony, L=SantoDomingo, ST=DO, C=DO",
+      "CN=GymMane GLP-1, OU=Fitness, O=GymMane, L=SantoDomingo, ST=DO, C=DO",
     ],
     { stdio: "inherit" }
   );
@@ -254,7 +261,7 @@ async function main() {
   const { ApkSigner, SigningKey, convertToPEM } = apkSignModule;
 
   const jksBytes = new Uint8Array(fs.readFileSync(keystorePath));
-  const { privateKey, certificate } = await convertToPEM(jksBytes, "ranita123", "jks");
+  const { privateKey, certificate } = await convertToPEM(jksBytes, "gymmane123", "jks");
 
   const signer = new ApkSigner({
     signingKey: SigningKey.fromPEM(privateKey, certificate),
@@ -263,10 +270,15 @@ async function main() {
   const unsignedBytes = new Uint8Array(fs.readFileSync(unsignedApk));
   const { signedApk } = await signer.sign(unsignedBytes);
 
-  const finalApkPath = path.join(rootDir, "Mi-Salud-Ranita-GLP1.apk");
+  const finalApkPath = path.join(rootDir, "GymMane-GLP1.apk");
   fs.writeFileSync(finalApkPath, Buffer.from(signedApk));
+
+  // Also maintain Mi-Salud-Ranita-GLP1.apk as a copy so legacy references still work
+  const legacyApkPath = path.join(rootDir, "Mi-Salud-Ranita-GLP1.apk");
+  fs.copyFileSync(finalApkPath, legacyApkPath);
+
   console.log(
-    `✅ APK v1.1.0 compilado y firmado (v1+v2+v3): ${finalApkPath} (${(signedApk.byteLength / (1024 * 1024)).toFixed(2)} MB)`
+    `✅ APK GymMane-GLP1.apk compilado y firmado (v1+v2+v3): ${finalApkPath} (${(signedApk.byteLength / (1024 * 1024)).toFixed(2)} MB)`
   );
 }
 

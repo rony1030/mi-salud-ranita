@@ -1,6 +1,6 @@
 {
-  "appId": "com.misalud.ranitaglp1",
-  "appName": "Mi Salud Ranita GLP-1",
+  "appId": "com.gymmane.glp1",
+  "appName": "GymMane GLP-1",
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {

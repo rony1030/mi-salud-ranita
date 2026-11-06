@@ -2,14 +2,14 @@ export const dynamic = "force-static";
 
 export default function manifest() {
   return {
-    name: "Mi Salud · Ranita GLP-1 & GymMane",
-    short_name: "Mi Salud",
+    name: "GymMane GLP-1 · Fuerza & Salud Metabólica",
+    short_name: "GymMane GLP-1",
     description:
-      "Dieta GLP-1 (Mounjaro y Ozempic), control de síntomas, seguimiento semanal y ejercicios con mapa corporal.",
+      "Entrenamiento de fuerza y seguimiento clínico para Mounjaro / Ozempic con nutrición, control de síntomas y series en vivo.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5f8fc",
-    theme_color: "#0c094e",
+    background_color: "#0D0D0F",
+    theme_color: "#0D0D0F",
     icons: [
       {
         src: "/icon.svg",

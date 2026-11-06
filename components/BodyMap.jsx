@@ -31,30 +31,30 @@ export default function BodyMap({
     <div className="bodymap-wrapper">
       <div className="bodymap-stage">
         <div className="bodymap-labels-top">
-          <span>Frente</span>
-          <span>Espalda</span>
+          <span>Vista Frontal</span>
+          <span>Vista Posterior</span>
         </div>
         <svg
           viewBox={`0 0 ${bodyViewW} ${bodyViewH}`}
           className="bodymap-svg"
           role="img"
-          aria-label="Mapa anatómico muscular interactivo de frente y espalda"
+          aria-label="Mapa anatómico interactivo GymMane"
         >
-          {/* Base silhouette */}
+          {/* Base anatomical silhouette in dark theme */}
           <g className="bodymap-base-main">
             {baseMain.map((d, i) => (
-              <path key={`bm-${i}`} d={d} fill="#cbd5e1" />
+              <path key={`bm-${i}`} d={d} fill="#272730" stroke="#16161A" strokeWidth="0.5" />
             ))}
           </g>
           <g className="bodymap-base-lite">
             {baseLite.map((d, i) => (
-              <path key={`bl-${i}`} d={d} fill="#e2e8f0" />
+              <path key={`bl-${i}`} d={d} fill="#32323E" />
             ))}
           </g>
           {headPaths.length > 0 && (
             <g className="bodymap-head">
               {headPaths.map((d, i) => (
-                <path key={`bh-${i}`} d={d} fill="#cbd5e1" />
+                <path key={`bh-${i}`} d={d} fill="#272730" />
               ))}
             </g>
           )}
@@ -62,25 +62,31 @@ export default function BodyMap({
           {/* Interactive Muscle Groups */}
           {Object.entries(fills).map(([muscleId, paths]) => {
             const isSelected = selectedSet.has(muscleId);
-            const isPriority =
-              highlightPriority && MUSCLE_LABELS[muscleId]?.priorityGlp1;
-            const fillColor = isSelected
-              ? "#059669"
-              : isPriority
-                ? "#6ee7b7"
-                : "#94a3b8";
-            const strokeColor = isSelected ? "#064e3b" : "transparent";
+            const isPriority = highlightPriority && MUSCLE_LABELS[muscleId]?.priorityGlp1;
+
+            let fillColor = "#3F3F4E";
+            let strokeColor = "transparent";
+            let strokeWidth = "0.4";
+
+            if (isSelected) {
+              fillColor = "#FF6B35"; // GymMane athletic orange
+              strokeColor = "#FFA07A";
+              strokeWidth = "1.8";
+            } else if (isPriority) {
+              fillColor = "#1E3A34"; // Dark emerald base
+              strokeColor = "#10B981"; // Emerald border
+              strokeWidth = "1.2";
+            }
 
             return (
               <g
                 key={muscleId}
-                className={`bodymap-muscle ${isSelected ? "selected" : ""}`}
+                className={`bodymap-muscle ${isSelected ? "selected" : ""} ${isPriority ? "priority-glp1" : ""}`}
                 onClick={() => onToggleMuscle?.(muscleId)}
                 style={{ cursor: "pointer" }}
               >
                 <title>
-                  {MUSCLE_LABELS[muscleId]?.name || muscleId} — Toca para
-                  seleccionar
+                  {MUSCLE_LABELS[muscleId]?.name || muscleId} — Toca para filtrar
                 </title>
                 {paths.map((d, idx) => (
                   <path
@@ -88,9 +94,9 @@ export default function BodyMap({
                     d={d}
                     fill={fillColor}
                     stroke={strokeColor}
-                    strokeWidth={isSelected ? "1.6" : "0.4"}
+                    strokeWidth={strokeWidth}
                     style={{
-                      transition: "fill 0.18s ease, transform 0.18s ease",
+                      transition: "fill 0.18s ease, stroke 0.18s ease, transform 0.18s ease",
                     }}
                   />
                 ))}
@@ -98,30 +104,21 @@ export default function BodyMap({
             );
           })}
         </svg>
-      </div>
 
-      <div className="bodymap-chips">
-        {Object.entries(MUSCLE_LABELS).map(([id, info]) => {
-          const active = selectedSet.has(id);
-          return (
-            <button
-              key={id}
-              type="button"
-              className={`muscle-chip ${active ? "active" : ""} ${
-                info.priorityGlp1 ? "priority-glp1" : ""
-              }`}
-              onClick={() => onToggleMuscle?.(id)}
-            >
-              <span>{info.icon}</span>
-              <span>{info.name}</span>
-              {info.priorityGlp1 && (
-                <small className="glp1-tag" title="Prioridad anti-flacidez GLP-1">
-                  Clave GLP-1
-                </small>
-              )}
-            </button>
-          );
-        })}
+        <div className="bodymap-legend">
+          <div className="legend-item">
+            <span className="legend-dot orange"></span>
+            <span>Seleccionado</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-dot emerald"></span>
+            <span>Prioridad Anti-Flacidez</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-dot neutral"></span>
+            <span>Músculo</span>
+          </div>
+        </div>
       </div>
     </div>
   );

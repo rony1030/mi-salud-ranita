@@ -55,17 +55,21 @@ test('Control de síntomas cubre efectos frecuentes de Mounjaro/Ozempic con cons
   }
 });
 
-test('Catálogo GymMane recreado contiene mapas anatómicos femenino/masculino y 115 ejercicios en español', () => {
+test('Catálogo GymMane recreado contiene mapas anatómicos femenino/masculino, 115 ejercicios y 12 programas', () => {
   assert.equal(EXERCISES.length, 115);
   assert.equal(Object.keys(MUSCLE_LABELS).length, 14);
   assert.ok(femaleBaseMain.length > 0);
   assert.ok(femaleFills.glutes.length > 0);
   assert.ok(bodyBaseMain.length > 0);
   assert.ok(muscleFills.chest.length > 0);
-  assert.ok(GLP1_ROUTINES.length >= 4);
+  assert.equal(GLP1_ROUTINES.length, 12);
+  const glp1Special = GLP1_ROUTINES.filter((r) => r.category === 'glp1');
+  const gymmaneClassic = GLP1_ROUTINES.filter((r) => r.category === 'classic');
+  assert.equal(glp1Special.length, 4);
+  assert.equal(gymmaneClassic.length, 8);
 });
 
-test('computeWellnessOverview calcula el semáforo de la Ranita (Verde, Amarillo y Rojo)', () => {
+test('computeWellnessOverview calcula el estado de bienestar y métricas de salud (Verde, Amarillo y Rojo)', () => {
   const base = defaultState();
   const today = Object.keys(base.nutritionByDate)[0];
 
@@ -88,6 +92,8 @@ test('computeWellnessOverview calcula el semáforo de la Ranita (Verde, Amarillo
   assert.equal(greenOverview.color, 'green');
   assert.equal(greenOverview.proteinPct, 100);
   assert.equal(greenOverview.waterPct, 100);
+  assert.ok(greenOverview.bmi > 0);
+  assert.ok(greenOverview.bmiCategory.length > 0);
 
   // Baja hidratación y baja proteína -> Amarillo
   const yellowState = {

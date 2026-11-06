@@ -42,7 +42,7 @@ async function main() {
     entryPath,
     `import React from "react";
 import { createRoot } from "react-dom/client";
-import SaludApp from "../components/SaludApp.jsx";
+import GymManeApp from "../components/GymManeApp.jsx";
 
 class RootErrorBoundary extends React.Component {
   constructor(props) {
@@ -55,15 +55,15 @@ class RootErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 24, fontFamily: "sans-serif", color: "#0c094e" }}>
-          <h2>🐸 Mi Salud · Ranita GLP-1</h2>
+        <div style={{ padding: 24, fontFamily: "sans-serif", background: "#0D0D0F", color: "#F4F4F6", minHeight: "100vh" }}>
+          <h2 style={{ color: "#FF6B35" }}>GymMane GLP-1</h2>
           <p>Ocurrió un error al cargar los datos guardados. Pulsa abajo para reiniciar:</p>
           <button
             onClick={() => {
               try { localStorage.clear(); } catch (e) {}
               window.location.reload();
             }}
-            style={{ padding: "12px 18px", background: "#10b981", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700 }}
+            style={{ padding: "12px 18px", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, cursor: "pointer" }}
           >
             Reiniciar aplicación
           </button>
@@ -80,7 +80,7 @@ function boot() {
     const root = createRoot(container);
     root.render(
       <RootErrorBoundary>
-        <SaludApp />
+        <GymManeApp />
       </RootErrorBoundary>
     );
   }
@@ -118,16 +118,19 @@ if (document.readyState === "loading") {
   const safeBundledJs = bundledJs.replace(/<\/script>/gi, "<\\/script>");
   const safeArtJs = artJs.replace(/<\/script>/gi, "<\\/script>");
 
-  // Create split files for APK (index.html ~560KB + art-bundle.js ~2.2MB, both well under Android 5MB asset limit)
-  const apkHtml = `<!DOCTYPE html>
-<html lang="es-DO">
+  // Create split files for APK & Web (index.html + art-bundle.js)
+  const appHtml = `<!DOCTYPE html>
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0c094e" />
-  <title>Mi Salud · Ranita GLP-1 (Mounjaro / Ozempic)</title>
+  <meta name="theme-color" content="#0D0D0F" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>GymMane GLP-1 · Fuerza y Salud Metabólica (Mounjaro / Ozempic)</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <style>
-    html, body, #root { min-height: 100%; width: 100%; margin: 0; padding: 0; }
+    html, body, #root { min-height: 100%; width: 100%; margin: 0; padding: 0; background-color: #0D0D0F; }
     ${css}
   </style>
 </head>
@@ -135,8 +138,16 @@ if (document.readyState === "loading") {
   <div id="root">
     <main class="loading-screen">
       <div class="loading-card">
-        <div style="font-size:48px;text-align:center">🐸</div>
-        <h2>Cargando Mi Salud · Ranita GLP-1…</h2>
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+          <path d="m6.5 6.5 11 11"/>
+          <path d="m21 21-1-1"/>
+          <path d="m3 3 1 1"/>
+          <path d="m18 22 4-4"/>
+          <path d="m2 6 4-4"/>
+          <path d="m3 10 7-7"/>
+          <path d="m14 21 7-7"/>
+        </svg>
+        <p class="loading-text">Cargando GymMane GLP-1…</p>
       </div>
     </main>
   </div>
@@ -147,18 +158,20 @@ if (document.readyState === "loading") {
 
   const outDir = path.join(rootDir, "dist-apk");
   fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(path.join(outDir, "index.html"), apkHtml, "utf8");
+  fs.writeFileSync(path.join(outDir, "index.html"), appHtml, "utf8");
   fs.writeFileSync(path.join(outDir, "art-bundle.js"), safeArtJs, "utf8");
+  fs.copyFileSync(path.join(rootDir, "public", "icon.svg"), path.join(outDir, "icon.svg"));
 
   // Also write to docs/ for GitHub Pages (https://rony1030.github.io/mi-salud-ranita/)
   const docsDir = path.join(rootDir, "docs");
   fs.mkdirSync(docsDir, { recursive: true });
-  fs.writeFileSync(path.join(docsDir, "index.html"), apkHtml, "utf8");
+  fs.writeFileSync(path.join(docsDir, "index.html"), appHtml, "utf8");
   fs.writeFileSync(path.join(docsDir, "art-bundle.js"), safeArtJs, "utf8");
   fs.writeFileSync(path.join(docsDir, ".nojekyll"), "", "utf8");
+  fs.copyFileSync(path.join(rootDir, "public", "icon.svg"), path.join(docsDir, "icon.svg"));
 
   console.log(
-    `Built APK & Pages bundle: index.html (${(apkHtml.length / 1024).toFixed(1)} KB) + art-bundle.js (${(safeArtJs.length / 1024).toFixed(1)} KB)`
+    `✅ Built standalone Web & APK bundle: index.html (${(appHtml.length / 1024).toFixed(1)} KB) + art-bundle.js (${(safeArtJs.length / 1024).toFixed(1)} KB)`
   );
 }
 
